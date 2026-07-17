@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Slow Roads+ — Calm Driving</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="title">SLOW <b>ROADS+</b></div>
+<div id="hud"><div id="speed">0<small> km/h</small></div><div id="dist">0.00 km</div></div>
+<div class="panel">
+  <button id="terrainBtn"><span class="lbl">Terrain:</span> Meadow</button>
+  <button id="timeBtn"><span class="lbl">Time:</span> Day</button>
+  <button id="camBtn"><span class="lbl">Camera:</span> Chase</button>
+  <button id="autoBtn"><span class="lbl">Drive:</span> Manual</button>
+  <button id="colorBtn"><span class="lbl">Car:</span> Red</button>
+</div>
+<div id="help">W/up accel - S/down brake - A/D steer<br>T time - R terrain - C cam - Space auto - V color</div>
+<script type="importmap">{ "imports": { "three":"https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/" } }</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
+
