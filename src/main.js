@@ -83,6 +83,7 @@ function updateWorld(immediate = false) {
 }
 async function switchMode() {
   if (switching) return;
+  const wasPaused = paused;
   switching = true;
   paused = true;
   controls.clear();
@@ -142,6 +143,7 @@ async function switchMode() {
     rig.snap = true;
     updateWorld(true);
     updateLabels();
+    persist();
     el("cityLoading").hidden = true;
     toast(
       driveMode === "pune"
@@ -159,7 +161,7 @@ async function switchMode() {
       ". Endless Drive remains available.";
   } finally {
     switching = false;
-    paused = el("settings").open;
+    paused = wasPaused || el("settings").open;
   }
 }
 function toast(text) {
@@ -170,6 +172,7 @@ function toast(text) {
 }
 function persist() {
   saveSettings({
+    driveMode,
     seed,
     quality,
     reduced,
@@ -322,9 +325,9 @@ el("shadows").value = ["Off", "Medium", "High"].includes(saved.shadows)
 el("reducedMotion").checked = reduced;
 el("seed").value = seed;
 for (const [id, key, defaultValue] of [
-  ["masterVolume", "master", 0.28],
-  ["engineVolume", "engine", 0.35],
-  ["ambienceVolume", "ambience", 0.4],
+  ["masterVolume", "master", 0.55],
+  ["engineVolume", "engine", 0.6],
+  ["ambienceVolume", "ambience", 0.5],
 ]) {
   audio[key] = Math.max(0, Math.min(1, Number(saved[key] ?? defaultValue)));
   el(id).value = audio[key];
@@ -391,6 +394,11 @@ renderer.domElement.addEventListener("webglcontextlost", (e) => {
 });
 renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY[quality].dpr));
 setShadows();
+const preferredDriveMode = ["endless", "pune"].includes(saved.driveMode)
+  ? saved.driveMode
+  : "pune";
+el("driveMode").value = preferredDriveMode;
+if (preferredDriveMode !== driveMode) await switchMode();
 updateLabels();
 let last = performance.now(),
   accumulator = 0,

@@ -21,9 +21,9 @@ Open **http://127.0.0.1:8123** and select **Begin your drive**. Python 3 and a m
 | Action                                | Keyboard              |
 | ------------------------------------- | --------------------- |
 | Accelerate                            | W / Up                |
-| Brake (does not engage reverse)       | S / Down              |
+| Brake, then reverse                   | S / Down              |
 | Steer                                 | A / D or Left / Right |
-| Reverse                               | Hold B                |
+| Reverse directly                      | Hold B                |
 | Manual / auto-drive                   | Space                 |
 | Chase / bumper / wide chase / cockpit | C                     |
 | Meadow / Desert / Snow / Canyon       | R                     |

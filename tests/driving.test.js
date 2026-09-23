@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { RoadPath } from "../src/roadPath.js";
 import { Vehicle } from "../src/vehicle.js";
+import { PHYS } from "../src/config.js";
 const path = new RoadPath("verification");
 test("deterministic, continuous road samples and nearest lookup across signed chunk and period boundaries", () => {
   const same = new RoadPath("verification"),
@@ -51,14 +52,17 @@ test("left lane auto drive, manual override, and return to road", () => {
   assert.equal(v.speed, 0);
   assert.ok(Math.abs(path.findNearestRoadPoint(v.x, v.z).offset + 2) < 0.02);
 });
-test("braking stops without accidental reverse; explicit reverse works", () => {
+test("braking transitions into reverse; the dedicated reverse control works", () => {
   const v = new Vehicle(path);
   for (let i = 0; i < 120; i++) v.update(1 / 60, { accel: true }, false);
   assert.ok(v.speed > 5);
   for (let i = 0; i < 300; i++) v.update(1 / 60, { brake: true }, false);
-  assert.equal(v.speed, 0);
-  for (let i = 0; i < 60; i++) v.update(1 / 60, { reverse: true }, false);
   assert.ok(v.speed < 0);
+  assert.ok(v.speed >= -PHYS.reverseSpeed);
+  const direct = new Vehicle(path);
+  for (let i = 0; i < 60; i++)
+    direct.update(1 / 60, { reverse: true }, false);
+  assert.ok(direct.speed < 0);
 });
 test("off-road surface slows the car and all biomes remain finite", () => {
   for (const biome of ["meadow", "desert", "snow", "canyon"]) {

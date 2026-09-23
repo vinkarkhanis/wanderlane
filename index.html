@@ -59,7 +59,7 @@
     <div id="touch" aria-label="Touch driving controls">
       <button data-key="left" aria-label="Steer left">←</button
       ><button data-key="right" aria-label="Steer right">→</button
-      ><button data-key="brake" aria-label="Brake">−</button
+      ><button data-key="brake" aria-label="Brake and reverse">−</button
       ><button data-key="accel" aria-label="Accelerate">+</button>
     </div>
     <div id="loading" class="overlay">
@@ -86,7 +86,7 @@
           <label
             >Drive Mode<select id="driveMode">
               <option value="endless">Endless Drive</option>
-              <option value="pune">Pune City — pilot</option>
+              <option value="pune" selected>Pune City — pilot</option>
             </select></label
           >
           <div id="puneOptions" hidden>
@@ -136,7 +136,7 @@
               min="0"
               max="1"
               step=".01"
-              value=".28"
+              value=".55"
           /></label>
           <label
             >Engine volume<input
@@ -145,7 +145,7 @@
               min="0"
               max="1"
               step=".01"
-              value=".35"
+              value=".6"
           /></label>
           <label
             >Ambience volume<input
@@ -154,7 +154,7 @@
               min="0"
               max="1"
               step=".01"
-              value=".4"
+              value=".5"
           /></label>
           <label class="check"
             ><input id="reducedMotion" type="checkbox" /> Reduced motion</label
@@ -170,8 +170,8 @@
         <details>
           <summary>Driving guide & keyboard controls</summary>
           <p>
-            W / ↑ accelerate · S / ↓ brake · A D / ← → steer · Hold B to
-            reverse<br />Space auto-drive · C camera · F cockpit · R
+            W / ↑ accelerate · S / ↓ brake, then reverse · A D / ← → steer ·
+            Hold B to reverse<br />Space auto-drive · C camera · F cockpit · R
             biome/season · T time · V paint · G traffic<br />H return to road ·
             M mute · Esc / P pause<br />Manual steering temporarily overrides
             auto-drive. Brake always takes priority. Return to Road stops the

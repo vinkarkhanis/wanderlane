@@ -1,9 +1,9 @@
 // Restrained original Web Audio synthesis. No external sound files.
 export class AudioSystem {
   constructor() {
-    this.master = 0.28;
-    this.engine = 0.35;
-    this.ambience = 0.4;
+    this.master = 0.55;
+    this.engine = 0.6;
+    this.ambience = 0.5;
     this.muted = false;
     this.status = "Sound ready";
   }
@@ -61,18 +61,18 @@ export class AudioSystem {
       ramp = (param, value) => param.setTargetAtTime(value, t, 0.12);
     ramp(this.gain.gain, this.muted || paused ? 0 : this.master);
     ramp(this.motor.frequency, 38 + Math.abs(v.speed) * 2.7 + v.throttle * 12);
-    ramp(this.motorGain.gain, this.engine * (0.025 + v.throttle * 0.065));
+    ramp(this.motorGain.gain, this.engine * (0.08 + v.throttle * 0.22));
     ramp(this.filter.frequency, 180 + Math.abs(v.speed) * 24);
     ramp(
       this.noiseGain.gain,
-      (0.018 + Math.abs(v.speed) * 0.003) *
+      (0.035 + Math.abs(v.speed) * 0.005) *
         (v.surface === "Asphalt" ? 1 : 1.25) *
         this.ambience,
     );
     ramp(this.ambient.frequency, night > 0.5 ? 620 : 390);
     ramp(
       this.ambientGain.gain,
-      this.ambience * 0.005 * (0.7 + 0.3 * Math.sin(t * 0.4)),
+      this.ambience * 0.018 * (0.7 + 0.3 * Math.sin(t * 0.4)),
     );
   }
 }

@@ -102,7 +102,7 @@ export class Vehicle {
     if (input.brake) drive = -1;
     this.throttle = damp(this.throttle, Math.max(0, drive), 4, dt);
     this.braking = drive < -0.08 && this.speed > 0.2;
-    const reverse = input.reverse && !auto;
+    const reverse = (input.reverse || input.brake) && !auto;
     let accel =
       this.throttle * PHYS.acceleration -
       (0.12 + Math.abs(this.speed) * 0.012) *
@@ -117,7 +117,6 @@ export class Vehicle {
       reverse ? -PHYS.reverseSpeed : 0,
       PHYS.maxSpeed,
     );
-    if (input.brake && this.speed < 0.03) this.speed = 0;
     const authority = auto ? 1 : 1 / (1 + Math.abs(this.speed) * 0.024),
       yaw =
         (this.speed / PHYS.wheelbase) *

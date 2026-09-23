@@ -23,15 +23,13 @@ const state = () => page.evaluate(() => window.wanderlane.state),
   report = {};
 try {
   await page.goto("http://127.0.0.1:8123");
-  await page.click("#startBtn");
-  await page.click("#settingsBtn");
-  await page.selectOption("#driveMode", "pune");
   await page.waitForFunction(
-    () => window.wanderlane.state.driveMode === "pune",
+    () => window.wanderlane?.state.driveMode === "pune",
     null,
     { timeout: 60000 },
   );
-  await page.click("#resumeBtn");
+  assert.equal(await page.locator("#driveMode").inputValue(), "pune");
+  await page.click("#startBtn");
   await page.waitForTimeout(1000);
   assert.ok(await page.locator("#mapAttribution").isVisible());
   assert.match(

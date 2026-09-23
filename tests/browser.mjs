@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.addInitScript(() =>
+  localStorage.setItem(
+    "wanderlane-settings",
+    JSON.stringify({ driveMode: "endless" }),
+  ),
+);
 const errors = [],
   warnings = [],
   remote = [];
@@ -23,6 +29,11 @@ try {
   await page.waitForTimeout(400);
   assert.equal((await state()).chunks, 9);
   report.initial = await state();
+  await page.keyboard.down("s");
+  await page.waitForTimeout(700);
+  await page.keyboard.up("s");
+  assert.ok((await state()).speed < 0);
+  await page.keyboard.press("KeyH");
   await page.keyboard.press("Space");
   await page.waitForTimeout(12000);
   report.auto = await state();
@@ -141,6 +152,16 @@ try {
   await touchPage.waitForTimeout(700);
   await touchPage.mouse.up();
   assert.ok(await touchPage.evaluate(() => window.wanderlane.state.speed > 0));
+  const brake = touchPage.locator('[data-key="brake"]'),
+    brakeBounds = await brake.boundingBox();
+  await touchPage.mouse.move(
+    brakeBounds.x + brakeBounds.width / 2,
+    brakeBounds.y + brakeBounds.height / 2,
+  );
+  await touchPage.mouse.down();
+  await touchPage.waitForTimeout(1800);
+  await touchPage.mouse.up();
+  assert.ok(await touchPage.evaluate(() => window.wanderlane.state.speed < 0));
   await touchPage.screenshot({ path: "tests/touch.png" });
   await touchPage.close();
   report.errors = errors;

@@ -8,11 +8,8 @@ page.on("pageerror", (e) => errors.push(e.message));
 page.on("response", (r) => {
   if (r.status() >= 400) bad.push(r.url());
 });
+const pattern = "**/cities/pune/chunks/*.json";
 try {
-  await page.goto("http://127.0.0.1:8123/dist/");
-  await page.click("#startBtn");
-  await page.click("#settingsBtn");
-  const pattern = "**/cities/pune/chunks/*.json";
   await page.route(pattern, (r) =>
     r.fulfill({
       status: 200,
@@ -20,7 +17,7 @@ try {
       body: '{"id":"corrupt"}',
     }),
   );
-  await page.selectOption("#driveMode", "pune");
+  await page.goto("http://127.0.0.1:8123/dist/");
   await page.waitForFunction(() =>
     document
       .getElementById("cityLoading")
@@ -30,6 +27,8 @@ try {
     await page.evaluate(() => window.wanderlane.state.driveMode),
     "endless",
   );
+  await page.click("#startBtn");
+  await page.click("#settingsBtn");
   await page.unroute(pattern);
   await page.selectOption("#driveMode", "pune");
   await page.waitForFunction(
