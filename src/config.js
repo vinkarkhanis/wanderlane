@@ -1,16 +1,37 @@
-// Game configuration: terrain palettes and tunable constants.
-
-export const TERRAINS = {
-  meadow: { name:'Meadow', ground:0x5a9a4e, road:0x33373d, fog:0xbfe0f0, grass:0x6fae5a, tree:0x2f5d2a, trunk:0x5b432c, treeChance:.6, grassDensity:1.0 },
-  desert: { name:'Desert', ground:0xd9b06a, road:0x4a4540, fog:0xe7d3a3, grass:0xcfa85e, tree:0x6b8f3d, trunk:0x7a5c34, treeChance:.12, grassDensity:.25 },
-  snow:   { name:'Snow',   ground:0xeef3f7, road:0x59636d, fog:0xd2dde8, grass:0xe8eef4, tree:0x2c4a35, trunk:0x4a3a2a, treeChance:.5,  grassDensity:.4 },
-  canyon: { name:'Canyon', ground:0xb3623c, road:0x3d3530, fog:0xe0a37a, grass:0xb88a52, tree:0x7a8f4d, trunk:0x6b4a2c, treeChance:.22, grassDensity:.3 },
+// Metres, seconds, radians; conversion to km/h happens only in the HUD.
+export const ROAD = {
+  width: 8,
+  lane: 2,
+  step: 4,
+  chunk: 160,
+  behind: 2,
+  ahead: 6,
+  shoulder: 1.1,
+  railOffset: 5.35,
 };
-export const TERRAIN_KEYS = ['meadow','desert','snow','canyon'];
-
-export const ROAD = { SEG:4, LENGTH:5000, WIDTH:13 };
-export const NSEG = ROAD.LENGTH / ROAD.SEG;
-
-export const COLORS = [['Red',0xd61f3a],['White',0xf2f2f2],['Blue',0x2a5cd6],['Black',0x1a1a1e]];
-
-export const PHYS = { maxSpeed:170, accel:42, drag:14, brake:80, autoSpeed:80, turnRate:1.7 };
+export const PHYS = {
+  maxSpeed: 42,
+  reverseSpeed: 5,
+  acceleration: 4.2,
+  brake: 9,
+  wheelbase: 2.65,
+  cruise: 23,
+};
+export const COLORS = [
+  ["Lagoon", 0x477c7c],
+  ["Pearl", 0xe7dfc9],
+  ["Ember", 0xad593c],
+  ["Slate", 0x465666],
+  ["Sage", 0x81937e],
+  ["Midnight", 0x242d3b],
+];
+export const QUALITY = {
+  Low: { dpr: 1, trees: 28, grass: 1000 },
+  Medium: { dpr: 1.5, trees: 44, grass: 2200 },
+  High: { dpr: 2, trees: 65, grass: 3600 },
+};
+export const damp = (a, b, rate, dt) =>
+  a + (b - a) * (1 - Math.exp(-rate * dt));
+export const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+export const angleDelta = (a, b) =>
+  Math.atan2(Math.sin(a - b), Math.cos(a - b));

@@ -1,0 +1,25 @@
+{
+  "name": "wanderlane",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/driving.test.js",
+    "serve": "python -m http.server 8123 --bind 127.0.0.1",
+    "test:browser": "node tests/browser.mjs",
+    "test:systems": "node tests/systems.mjs",
+    "format": "prettier --write src index.html styles.css tests/*.js tests/*.mjs",
+    "test:environment": "node tests/environment.mjs",
+    "test:car": "node tests/car.mjs && node tests/car-model.mjs",
+    "import:pune": "node tools/import-pune.mjs",
+    "validate:pune": "node tools/validate-pune.mjs",
+    "test:pune": "node --test tests/pune.test.mjs",
+    "build": "node tools/build.mjs",
+    "test:pune:browser": "node tests/pune-browser.mjs",
+    "test:pune:world": "node tests/pune-world.mjs",
+    "test:pune:deployment": "node tests/pune-deployment.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "prettier": "^3.9.8"
+  }
+}

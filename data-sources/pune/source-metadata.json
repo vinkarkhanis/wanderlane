@@ -1,0 +1,22 @@
+{
+  "source": "OpenStreetMap API 0.6 map export",
+  "url": "https://api.openstreetmap.org/api/0.6/map",
+  "retrievedAt": "2026-09-19T14:24:09.896526+00:00",
+  "licence": "ODbL-1.0",
+  "copyright": "https://www.openstreetmap.org/copyright",
+  "sha256": "d0b7908e3548680da58be2a1f3f892752e9fd40cf24127cd4e2991d0aa04527e",
+  "bounds": {
+    "west": 73.772,
+    "south": 18.534,
+    "east": 73.81,
+    "north": 18.57
+  },
+  "queries": [
+    "https://api.openstreetmap.org/api/0.6/map?bbox=73.772,18.534,73.791,18.552",
+    "https://api.openstreetmap.org/api/0.6/map?bbox=73.791,18.534,73.810,18.552",
+    "https://api.openstreetmap.org/api/0.6/map?bbox=73.772,18.552,73.791,18.570",
+    "https://api.openstreetmap.org/api/0.6/map?bbox=73.791,18.552,73.810,18.570"
+  ],
+  "preprocessing": "Four API exports deduplicated by element type/id, numeric node coordinates and tags retained, converted to Overpass-compatible JSON and gzip cached. Overpass query supplied as future equivalent, not source of this snapshot.",
+  "modifiedDatabaseDistributed": true
+}

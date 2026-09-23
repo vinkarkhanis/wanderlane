@@ -1,0 +1,63 @@
+{
+  "bounds": {
+    "west": 73.772,
+    "south": 18.534,
+    "east": 73.81,
+    "north": 18.57
+  },
+  "sourceSha256": "d0b7908e3548680da58be2a1f3f892752e9fd40cf24127cd4e2991d0aa04527e",
+  "roadLengthByClass": {
+    "secondary": 24727.41,
+    "primary": 9455.61,
+    "tertiary": 22246.03,
+    "trunk": 4431.32,
+    "service": 12591.02,
+    "residential": 102939.06,
+    "living_street": 1098.92,
+    "unclassified": 66.02
+  },
+  "malformed": [
+    "Missing relation member 2794610/207832298",
+    "Missing relation member 2794610/207832299"
+  ],
+  "excludedRoadWays": 1054,
+  "warnings": [
+    "Finite pilot boundary: roads are truncated to in-bounds nodes.",
+    "Bridge decks use simplified elevations and approach ramps; complex vertical topology requires manual review.",
+    "Via-way turn restrictions and conditional access are not yet interpreted. Traffic signals are imported but not yet simulated.",
+    "Water and vegetation use generic original art."
+  ],
+  "fallbacks": [
+    "Road widths from lanes/classification when width missing.",
+    "Unspecified building heights inferred deterministically from type and footprint area.",
+    "Synthetic terrain — not surveyed Pune elevation"
+  ],
+  "disconnectedDriveableSegments": 132,
+  "connectedComponents": 30,
+  "roadSegments": 5576,
+  "bridges": 43,
+  "tunnels": 0,
+  "landusePolygons": 364,
+  "parks": 25,
+  "waterPolygons": 12,
+  "buildingsExplicitHeight": 32,
+  "buildingsInferredHeight": 5299,
+  "buildingsOmittedForOverlap": 1139,
+  "buildingsImported": 5331,
+  "elevatedRoadSegments": 614,
+  "bridgeTreatment": "Simplified shared-node decks, source layer * 5 m (3.5–14 m), connected approach ramps at 4.5% added slope; manual review required.",
+  "turnRestrictions": 4,
+  "unsupportedGeometry": {
+    "railwayWays": 26,
+    "barrierWays": 34,
+    "waterwayLines": 10,
+    "nonDriveablePaths": 129,
+    "note": "These source lines are retained in the cached database but not rendered in this first pilot."
+  },
+  "trafficSignals": 19,
+  "route": {
+    "name": "Baner–Pashan Explorer",
+    "length": 10731,
+    "edges": 468
+  }
+}

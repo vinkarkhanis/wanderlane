@@ -2,3 +2,12 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Generated local QA artifacts
+/tests/*.png
+/tests/*-results.json
+/data-sources/pune/raw/
+/tests/pune-reimport/
+/dist/
+/dist-files.json
+/wanderlane-pune.zip

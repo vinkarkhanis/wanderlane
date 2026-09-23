@@ -1,25 +1,213 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Slow Roads+ — Calm Driving</title>
-<link rel="stylesheet" href="./styles.css" />
-</head>
-<body>
-<canvas id="c"></canvas>
-<div id="title">SLOW <b>ROADS+</b></div>
-<div id="hud"><div id="speed">0<small> km/h</small></div><div id="dist">0.00 km</div></div>
-<div class="panel">
-  <button id="terrainBtn"><span class="lbl">Terrain:</span> Meadow</button>
-  <button id="timeBtn"><span class="lbl">Time:</span> Day</button>
-  <button id="camBtn"><span class="lbl">Camera:</span> Chase</button>
-  <button id="autoBtn"><span class="lbl">Drive:</span> Manual</button>
-  <button id="colorBtn"><span class="lbl">Car:</span> Red</button>
-</div>
-<div id="help">W/up accel - S/down brake - A/D steer<br>T time - R terrain - C cam - Space auto - V color</div>
-<script type="importmap">{ "imports": { "three":"https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/" } }</script>
-<script type="module" src="./src/main.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#172d31" />
+    <meta
+      name="description"
+      content="Wanderlane — a peaceful scenic drive in the fictional Aster GT."
+    />
+    <title>Wanderlane — Take the long way</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <canvas id="c" aria-label="Wanderlane scenic driving view"></canvas>
+    <header>
+      <div class="wordmark"><span class="mark">✧</span> WANDERLANE</div>
+      <div class="edition">
+        THE OPEN ROAD COLLECTION <span> / </span> ASTER GT
+      </div>
+    </header>
+    <div id="vista">
+      <span id="biomeLabel">MEADOW</span><span class="dot">•</span
+      ><span id="timeLabel">SUNSET</span>
+    </div>
+    <nav class="toolbar" aria-label="Driving options">
+      <button id="terrainBtn" title="Change biome (R)">Meadow</button
+      ><button id="timeBtn" title="Change time (T)">Sunset</button
+      ><button id="camBtn" title="Camera (C) / cockpit (F)">Chase</button
+      ><button id="autoBtn" title="Auto drive (Space)">Manual</button
+      ><button id="trafficBtn" title="Traffic (G)">Traffic off</button
+      ><button id="colorBtn" title="Paint (V)">Lagoon</button
+      ><button id="returnBtn" title="Return to Road (H)">Return to Road</button
+      ><button id="muteBtn" title="Mute (M)">Sound on</button
+      ><button id="settingsBtn" title="Pause and settings (Esc)">
+        Settings <span>☷</span>
+      </button>
+    </nav>
+    <div id="hud">
+      <div class="speedline"><span id="speed">0</span><small>KM/H</small></div>
+      <div class="journey">
+        <span id="dist">0.00</span> KM <span> / </span
+        ><span id="surface">ASPHALT</span>
+      </div>
+    </div>
+    <div id="driveStatus">A little further. A little quieter.</div>
+    <div id="hint">W A S D to drive <span>·</span> SPACE to wander on auto</div>
+    <div id="routeStatus" hidden></div>
+    <a
+      id="mapAttribution"
+      hidden
+      href="https://www.openstreetmap.org/copyright"
+      target="_blank"
+      rel="noopener"
+      >Map data © OpenStreetMap contributors, available under ODbL 1.0.</a
+    >
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="touch" aria-label="Touch driving controls">
+      <button data-key="left" aria-label="Steer left">←</button
+      ><button data-key="right" aria-label="Steer right">→</button
+      ><button data-key="brake" aria-label="Brake">−</button
+      ><button data-key="accel" aria-label="Accelerate">+</button>
+    </div>
+    <div id="loading" class="overlay">
+      <div class="welcome">
+        <div class="eyebrow">A MOMENT AWAY FROM EVERYTHING</div>
+        <h1>WANDERLANE</h1>
+        <p>Take the long way.</p>
+        <div class="rule"></div>
+        <p class="intro">
+          An open road. A changing sky.<br />Your Aster GT, and nowhere you need
+          to be.
+        </p>
+        <button id="startBtn" disabled>Preparing your drive…</button
+        ><small>WASD / arrows to drive · Space for auto-drive</small>
+      </div>
+    </div>
+    <dialog id="settings">
+      <form method="dialog">
+        <div class="eyebrow">TAKE YOUR TIME</div>
+        <h2>A pause along the way.</h2>
+        <p>Take the long way.</p>
+        <div id="cityLoading" role="status" hidden></div>
+        <div class="settings-grid">
+          <label
+            >Drive Mode<select id="driveMode">
+              <option value="endless">Endless Drive</option>
+              <option value="pune">Pune City — pilot</option>
+            </select></label
+          >
+          <div id="puneOptions" hidden>
+            <label
+              >Pune Route<select id="puneRoute">
+                <option>Baner–Pashan Explorer</option>
+              </select></label
+            ><label
+              >Pune Season<select id="puneSeason">
+                <option>Summer</option>
+                <option>Monsoon</option>
+                <option>Winter</option>
+              </select></label
+            >
+          </div>
+          <label
+            >Graphics<select id="quality">
+              <option>Low</option>
+              <option selected>Medium</option>
+              <option>High</option>
+            </select></label
+          >
+          <label
+            >Shadows<select id="shadows">
+              <option>Off</option>
+              <option selected>Medium</option>
+              <option>High</option>
+            </select></label
+          >
+          <label
+            >Traffic<select id="traffic">
+              <option>Off</option>
+              <option>Light</option>
+              <option>Normal</option>
+            </select></label
+          >
+          <label
+            >Auto-drive lane<select id="lane">
+              <option value="2">Right lane</option>
+              <option value="-2">Left lane</option>
+            </select></label
+          >
+          <label
+            >Master volume<input
+              id="masterVolume"
+              type="range"
+              min="0"
+              max="1"
+              step=".01"
+              value=".28"
+          /></label>
+          <label
+            >Engine volume<input
+              id="engineVolume"
+              type="range"
+              min="0"
+              max="1"
+              step=".01"
+              value=".35"
+          /></label>
+          <label
+            >Ambience volume<input
+              id="ambienceVolume"
+              type="range"
+              min="0"
+              max="1"
+              step=".01"
+              value=".4"
+          /></label>
+          <label class="check"
+            ><input id="reducedMotion" type="checkbox" /> Reduced motion</label
+          >
+          <label class="seed"
+            >Route seed<input
+              id="seed"
+              maxlength="64"
+              value="aster-2026"
+              autocomplete="off" /></label
+          ><button type="button" id="seedBtn">Restart with this seed</button>
+        </div>
+        <details>
+          <summary>Driving guide & keyboard controls</summary>
+          <p>
+            W / ↑ accelerate · S / ↓ brake · A D / ← → steer · Hold B to
+            reverse<br />Space auto-drive · C camera · F cockpit · R
+            biome/season · T time · V paint · G traffic<br />H return to road ·
+            M mute · Esc / P pause<br />Manual steering temporarily overrides
+            auto-drive. Brake always takes priority. Return to Road stops the
+            car safely in your selected lane.
+          </p>
+        </details>
+        <details>
+          <summary>Credits &amp; map sources</summary>
+          <p>
+            WANDERLANE · original Aster GT, procedural art and sound. Three.js:
+            MIT.<br /><a
+              href="https://www.openstreetmap.org/copyright"
+              target="_blank"
+              rel="noopener"
+              >Map data © OpenStreetMap contributors, available under ODbL
+              1.0.</a
+            ><br />Pune is a finite Baner–Aundh–Pashan pilot. Terrain elevation
+            is temporarily synthetic, not surveyed.
+            <a href="./assets/cities/pune/attribution.json">Data provenance</a>
+            ·
+            <a href="./assets/cities/pune/import-report.json">Import report</a>
+            ·
+            <a href="./assets/cities/pune/source.osm.json.gz" download
+              >Download OSM source database</a
+            >
+          </p>
+        </details>
+        <div class="dialog-footer">
+          <small id="seedInfo">Seed: aster-2026</small
+          ><button id="resumeBtn" value="resume">Back to the drive →</button>
+        </div>
+      </form>
+    </dialog>
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three.module.js" } }
+    </script>
+    <script type="module" src="./src/main.js"></script>
+  </body>
 </html>
-
