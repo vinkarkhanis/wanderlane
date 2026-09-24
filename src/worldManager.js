@@ -11,6 +11,12 @@ export class WorldManager {
     this.biome = biome;
     this.quality = quality;
     this.chunks = new Map();
+    path.groundHeight = (x, z) => {
+      const p = path.findNearestRoadPoint(x, z, {});
+      return this.chunks
+        .get(Math.floor(p.distance / ROAD.chunk))
+        ?.terrain.userData.heightAt(x, z);
+    };
     this.wind = { value: 0 };
     this.makeResources();
   }

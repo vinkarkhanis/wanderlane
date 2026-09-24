@@ -1,5 +1,77 @@
 import { PHYS, ROAD, damp, clamp, angleDelta } from "./config.js";
 import { terrainHeight } from "./heightfield.js";
+// Bicycle steering with a smooth speed curve and a tyre lateral-force budget.
+export function steeringAngle(speed) {
+  return (
+    PHYS.steeringAngle / (1 + (Math.abs(speed) / PHYS.steeringSpeed) ** 1.35)
+  );
+}
+export function contactHeight(path, x, z, biome, height) {
+  const p = (path.surfacePoint || path.findNearestRoadPoint).call(
+    path,
+    x,
+    z,
+    {},
+    height,
+  );
+  const ground =
+    path.groundHeight?.(x, z) ??
+    (path.city
+      ? p.y - 0.31
+      : terrainHeight(path, p.distance, p.offset, biome) - 0.22);
+  const edge = (p.width || ROAD.width) / 2;
+  const shoulder = path.city ? 0.7 : ROAD.shoulder;
+  const off = p.surfaceDistance ?? Math.abs(p.offset);
+  const roadY = p.y - (path.city ? 0.015 : 0);
+  if (
+    p.elevated &&
+    !p.bridge &&
+    path.groundHeight &&
+    off > edge + shoulder - 0.25
+  ) {
+    const r = path.roads[p.roadId],
+      inner = edge + shoulder;
+    if (off <= inner) return roadY - 0.05 + 0.015;
+    // Match CityWorld's two embankment triangles alongside elevated approaches.
+    const width =
+      Math.max(
+        r.y0 - path.groundHeight(...r.p) - 0.22,
+        r.y1 - path.groundHeight(...r.q) - 0.22,
+        1,
+      ) * 1.5;
+    if (off < inner + width) {
+      const side = Math.sign(p.offset),
+        outer = inner + width;
+      const a = r.y0 + 0.022,
+        b = r.y1 + 0.022;
+      const c =
+        path.groundHeight(
+          r.p[0] + p.nx * outer * side,
+          r.p[1] + p.nz * outer * side,
+        ) + 0.02;
+      const d =
+        path.groundHeight(
+          r.q[0] + p.nx * outer * side,
+          r.q[1] + p.nz * outer * side,
+        ) + 0.02;
+      const u = p.fraction,
+        v = (off - inner) / width;
+      return (
+        (u + v <= 1
+          ? a * (1 - u - v) + b * u + c * v
+          : d * (u + v - 1) + c * (1 - u) + b * (1 - v)) + 0.015
+      );
+    }
+  }
+  // A tyre contact patch straddles the small asphalt/shoulder lip.
+  const lip = clamp((off - edge + 0.18) / 0.36, 0, 1);
+  const verge = clamp((off - edge - shoulder + 0.25) / 0.5, 0, 1);
+  return (
+    (roadY - lip * (path.city ? 0.05 : 0.025)) * (1 - verge) +
+    ground * verge +
+    0.015
+  );
+}
 export class Vehicle {
   constructor(path) {
     this.path = path;
@@ -23,13 +95,23 @@ export class Vehicle {
     this.speed = 0;
     this.steer = 0;
     this.throttle = 0;
+    this.wheelAngle = 0;
+    this.wheelHeights = null;
+    this.roll = 0;
     this.override = 0;
     this.braking = false;
     this.squat = 0;
   }
   update(dt, input, auto, biome = "meadow", traffic = null) {
+    if (!Number.isFinite(dt) || dt <= 0) return;
+    const elapsed = Math.min(dt, PHYS.maxDelta);
+    const steps = Math.ceil(elapsed / PHYS.maxStep);
+    for (let i = 0; i < steps; i++)
+      this.step(elapsed / steps, input, auto, biome, traffic);
+  }
+  step(dt, input, auto, biome, traffic) {
     const p = this.path.findNearestRoadPoint(this.x, this.z, this.near, this.y),
-      off = Math.abs(p.offset);
+      off = p.surfaceDistance ?? Math.abs(p.offset);
     this.surface =
       off <= (p.width || 8) / 2
         ? "Asphalt"
@@ -92,7 +174,12 @@ export class Vehicle {
         steerTarget = 0;
       }
     }
-    this.steer = damp(this.steer, steerTarget, 5, dt);
+    this.steer = damp(
+      this.steer,
+      steerTarget,
+      auto ? 5 : steerTarget ? PHYS.steerIn : PHYS.steerOut,
+      dt,
+    );
     const previous = this.speed;
     let drive = auto
       ? clamp((goal - this.speed) * 0.6, -1, 1)
@@ -110,19 +197,28 @@ export class Vehicle {
         Math.sign(this.speed);
     if (drive < 0 && this.speed > 0) accel += drive * PHYS.brake;
     if (reverse) accel = this.speed > 0.1 ? -PHYS.brake : -2;
-    if (input.accel && this.speed < 0) accel = PHYS.brake;
-    if (!road && this.speed > 14) accel -= (this.speed - 14) * 2.5;
+    if (input.accel && !reverse && this.speed < 0) accel = PHYS.brake;
+    if (!road && Math.abs(this.speed) > 14)
+      accel -= Math.sign(this.speed) * (Math.abs(this.speed) - 14) * 2.5;
     this.speed = clamp(
       this.speed + accel * dt,
-      reverse ? -PHYS.reverseSpeed : 0,
+      reverse || this.speed < 0 ? -PHYS.reverseSpeed : 0,
       PHYS.maxSpeed,
     );
-    const authority = auto ? 1 : 1 / (1 + Math.abs(this.speed) * 0.024),
-      yaw =
-        (this.speed / PHYS.wheelbase) *
-        Math.tan(this.steer * (this.path.city ? 0.75 : 0.42) * authority) *
-        grip;
-    this.heading += clamp(yaw, -0.7, 0.7) * dt;
+    this.wheelAngle =
+      this.steer *
+      (auto && !manual && this.override <= 0
+        ? this.path.city
+          ? 0.75
+          : 0.42
+        : steeringAngle(this.speed));
+    const yaw =
+      (this.speed / PHYS.wheelbase) * Math.tan(this.wheelAngle) * grip;
+    const yawLimit = Math.min(
+      0.7,
+      (PHYS.lateralAcceleration * grip) / Math.max(1, Math.abs(this.speed)),
+    );
+    this.heading += clamp(yaw, -yawLimit, yawLimit) * dt;
     this.x += Math.sin(this.heading) * this.speed * dt;
     this.z += Math.cos(this.heading) * this.speed * dt;
     this.path.findNearestRoadPoint(this.x, this.z, p, this.y);
@@ -140,20 +236,52 @@ export class Vehicle {
       this.heading +=
         angleDelta(p.heading, this.heading) * (1 - Math.exp(-2 * dt));
     }
-    this.y = this.path.city
-      ? Math.abs(p.offset) <= p.width / 2 + 1
-        ? p.y
-        : (this.path.groundHeight?.(this.x, this.z) ?? p.y)
-      : terrainHeight(this.path, p.distance, p.offset, biome) +
-        (Math.abs(p.offset) <= 5.1 ? 0.065 : -0.2);
-    this.pitch = damp(this.pitch, p.pitch, 8, dt);
+    this.path.resolveContacts?.(this, dt);
+    const s = Math.sin(this.heading),
+      c = Math.cos(this.heading);
+    const heights = [];
+    for (const axle of PHYS.axles)
+      for (const side of [-PHYS.halfTrack, PHYS.halfTrack])
+        heights.push(
+          contactHeight(
+            this.path,
+            this.x + s * axle + c * side,
+            this.z + c * axle - s * side,
+            biome,
+            this.y,
+          ),
+        );
+    this.wheelHeights = heights;
+    const rear = (heights[0] + heights[1]) / 2,
+      front = (heights[2] + heights[3]) / 2;
+    const support = (rear + front) / 2;
+    // Short suspension travel keeps damping from leaving the wheels below ground.
+    this.y = clamp(
+      damp(this.y, support, PHYS.suspensionRate, dt),
+      support - PHYS.suspensionTravel,
+      support + PHYS.suspensionTravel,
+    );
+    this.pitch = damp(
+      this.pitch,
+      Math.atan2(front - rear, PHYS.axles[1] - PHYS.axles[0]),
+      12,
+      dt,
+    );
+    this.roll = damp(
+      this.roll,
+      Math.atan2(
+        (heights[1] + heights[3] - heights[0] - heights[2]) / 2,
+        PHYS.halfTrack * 2,
+      ),
+      12,
+      dt,
+    );
     this.squat = damp(
       this.squat,
       clamp(((this.speed - previous) / dt) * 0.004, -0.035, 0.025),
       5,
       dt,
     );
-    this.path.resolveContacts?.(this, dt);
     this.dist += (Math.abs(this.speed) * dt) / 1000;
   }
 }

@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { RoadPath } from "./roadPath.js";
 import { WorldManager } from "./worldManager.js";
 import { Vehicle } from "./vehicle.js";
+import { VehiclePose } from "./vehiclePose.js";
 import { Car } from "./car.js";
 import { CAMERA_MODES } from "./carGeometry.js";
 import { CameraRig } from "./camera.js";
@@ -78,7 +79,8 @@ function makeWorld() {
   return w;
 }
 function updateWorld(immediate = false) {
-  if (driveMode === "pune") world.update(vehicle, time, reduced, env.night);
+  if (driveMode === "pune")
+    world.update(vehicle, time, reduced, env.night, env.mode === 2);
   else world.update(vehicle.near.distance, time, reduced, immediate);
 }
 async function switchMode() {
@@ -405,6 +407,7 @@ let last = performance.now(),
   hudTime = 0,
   frameMs = 16.7;
 const step = 1 / 60;
+const presentation = new VehiclePose();
 function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min((now - last) / 1000, 0.1);
@@ -414,6 +417,7 @@ function loop(now) {
     accumulator += dt;
     const input = controls.input;
     while (accumulator >= step) {
+      presentation.capture(vehicle);
       vehicle.update(step, input, auto, biome, traffic);
       traffic.update(step, vehicle, env.night);
       accumulator -= step;
@@ -422,10 +426,15 @@ function loop(now) {
   } else accumulator = 0;
   vehicle.auto = auto;
   car.setCameraMode(rig.mode);
-  car.place(vehicle, reduced);
-  car.update(paused ? 0 : dt, vehicle.speed, env.night, vehicle.braking);
+  const visual = presentation.sample(
+    vehicle,
+    accumulator / step,
+    paused || rig.snap,
+  );
+  car.place(visual, reduced);
+  car.update(paused ? 0 : dt, visual.speed, env.night, vehicle.braking);
   updateWorld();
-  env.update(vehicle, dt, biome, time, reduced);
+  env.update(visual, dt, biome, time, reduced);
   if (driveMode === "pune") {
     scene.fog.far = season === "Monsoon" ? 360 : quality === "Low" ? 260 : 490;
     if (season === "Monsoon") {
@@ -441,16 +450,16 @@ function loop(now) {
       vehicle.z < b[1] + 5 ||
       vehicle.z > b[3] - 5
     ) {
-      traffic.clearNear(vehicle.near.distance);
-      vehicle.reset(vehicle.near.distance, vehicle.lane);
-      rig.snap = true;
-      toast("Edge of the Pune pilot. Returned to the Explorer route.");
+      vehicle.x = Math.max(b[0] + 5, Math.min(b[2] - 5, vehicle.x));
+      vehicle.z = Math.max(b[1] + 5, Math.min(b[3] - 5, vehicle.z));
+      vehicle.speed = 0;
+      toast("Edge of the Pune pilot. Turn back or use Return to Road.");
     }
   }
   for (const material of Object.values(world.res))
     if (material?.isMaterial) material.envMapIntensity = 0.5 - env.night * 0.44;
-  particles.update(vehicle, biome, env.night, time, reduced);
-  rig.update(vehicle, dt, reduced, car);
+  particles.update(visual, biome, env.night, time, reduced);
+  rig.update(visual, dt, reduced, car);
   audio.update(vehicle, env.night, paused);
   hudTime += dt;
   if (hudTime > 0.15) {
@@ -507,6 +516,11 @@ window.wanderlane = {
         waiting: !!c.waiting,
       })),
       position: { x: vehicle.x, y: vehicle.y, z: vehicle.z },
+      renderPosition: {
+        x: car.group.position.x,
+        y: car.group.position.y,
+        z: car.group.position.z,
+      },
       cameraPosition: rig.cam.position.toArray(),
       cockpitVisible: car.cockpit.group.visible,
       steeringWheelAngle: car.cockpit.wheel.rotation.z,

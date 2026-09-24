@@ -170,3 +170,28 @@ nearest-road/Return to Road preserve bridge elevation. Bridge rail contact slows
 and gently contains the car. A streamed full-loop test measured 3.68 m maximum
 route-centre deviation (previously 5.50 m); further lane and intersection review
 is still needed. See [VERIFICATION.md](VERIFICATION.md) for current results.
+
+## Driving and city-detail pass
+
+Manual steering now builds progressively, returns to centre faster, and uses a
+speed-sensitive wheel angle with a lateral-acceleration limit. Releasing reverse
+coasts naturally; braking has priority over acceleration. Physics updates are
+substepped and cap stalled-frame catch-up at 100 ms. Wheel contact samples the
+rendered terrain, road shoulders and city approach embankments; each wheel follows
+its own contact height while the body settles through short suspension travel.
+Chase/wide cameras filter vertical motion independently of responsive heading
+tracking. Reduced motion retains filtering and suppresses decorative body motion.
+
+Touch steering is grouped on the left, with Drive and Brake / R on the right.
+Multiple pointers work together; moving off a button, cancellation, lost capture,
+focus loss and pausing release inputs and their visible pressed states.
+
+Pune now includes deterministic roadside lamps, trees, utility cabinets and OSM
+street-name signs. Placement checks the full road network and local building/water
+footprints. Per-tile detail caps are 18/30/40 for Low/Medium/High. Fixtures share
+materials and brighten at sunset/night without adding dynamic lights. Signs use
+one disposable texture atlas per tile, with validated names and 180 m spacing for
+repeated names. The map boundary stops the car; Return to Road remains deliberate.
+
+Additional regression command: `npm run test:improvements:browser` (local server
+required). See [VERIFICATION.md](VERIFICATION.md) for coverage and measured limits.

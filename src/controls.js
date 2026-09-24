@@ -2,6 +2,8 @@ export class Controls {
   constructor(hooks) {
     this.keys = {};
     this.touch = {};
+    this.pointers = new Map();
+    this.buttons = [...document.querySelectorAll("[data-key]")];
     const binds = {
       KeyT: "time",
       KeyR: "terrain",
@@ -33,6 +35,7 @@ export class Controls {
     });
     addEventListener("keyup", (e) => delete this.keys[e.code]);
     addEventListener("blur", () => this.clear());
+    document.addEventListener("visibilitychange", () => this.clear());
     for (const [id, hook] of Object.entries({
       timeBtn: "time",
       terrainBtn: "terrain",
@@ -48,19 +51,57 @@ export class Controls {
         hooks[hook]();
         document.getElementById(id).blur();
       });
-    for (const b of document.querySelectorAll("[data-key]")) {
+    for (const b of this.buttons) {
+      const release = (e) => {
+        this.pointers.delete(e.pointerId);
+        this.syncTouch();
+        if (b.hasPointerCapture(e.pointerId))
+          b.releasePointerCapture(e.pointerId);
+      };
       b.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0 || document.querySelector("dialog[open]")) return;
         e.preventDefault();
         b.setPointerCapture(e.pointerId);
-        this.touch[b.dataset.key] = true;
+        this.pointers.set(e.pointerId, b.dataset.key);
+        this.syncTouch();
       });
-      for (const event of ["pointerup", "pointercancel", "lostpointercapture"])
-        b.addEventListener(event, () => delete this.touch[b.dataset.key]);
+      b.addEventListener("pointermove", (e) => {
+        const r = b.getBoundingClientRect();
+        if (
+          e.clientX < r.left ||
+          e.clientX > r.right ||
+          e.clientY < r.top ||
+          e.clientY > r.bottom
+        )
+          release(e);
+      });
+      b.addEventListener("contextmenu", (e) => e.preventDefault());
+      for (const event of [
+        "pointerup",
+        "pointercancel",
+        "lostpointercapture",
+        "pointerleave",
+      ])
+        b.addEventListener(event, release);
+    }
+  }
+  syncTouch() {
+    this.touch = {};
+    for (const key of this.pointers.values()) this.touch[key] = true;
+    for (const b of this.buttons) {
+      const pressed = !!this.touch[b.dataset.key];
+      b.classList.toggle("pressed", pressed);
+      b.setAttribute("aria-pressed", String(pressed));
     }
   }
   clear() {
     this.keys = {};
-    this.touch = {};
+    const pointers = [...this.pointers.keys()];
+    this.pointers.clear();
+    this.syncTouch();
+    for (const b of this.buttons)
+      for (const id of pointers)
+        if (b.hasPointerCapture(id)) b.releasePointerCapture(id);
   }
   get input() {
     const k = this.keys,

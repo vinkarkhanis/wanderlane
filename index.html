@@ -57,10 +57,18 @@
     >
     <div id="toast" role="status" aria-live="polite"></div>
     <div id="touch" aria-label="Touch driving controls">
-      <button data-key="left" aria-label="Steer left">←</button
-      ><button data-key="right" aria-label="Steer right">→</button
-      ><button data-key="brake" aria-label="Brake and reverse">−</button
-      ><button data-key="accel" aria-label="Accelerate">+</button>
+      <div class="touch-group" role="group" aria-label="Steering">
+        <button data-key="left" aria-label="Steer left">←</button>
+        <button data-key="right" aria-label="Steer right">→</button>
+      </div>
+      <div class="touch-group pedals" role="group" aria-label="Pedals">
+        <button data-key="brake" aria-label="Brake and reverse">
+          <span>↓</span><small>Brake / R</small>
+        </button>
+        <button data-key="accel" aria-label="Accelerate">
+          <span>↑</span><small>Drive</small>
+        </button>
+      </div>
     </div>
     <div id="loading" class="overlay">
       <div class="welcome">

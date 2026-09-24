@@ -120,6 +120,7 @@ export class CityPath {
       roadId: r.id,
       oneway: r.oneway,
       bridge: !!r.tags.bridge && r.tags.bridge !== "no",
+      elevated: !!r.elevated,
       speedLimit: Math.min(11, parseFloat(r.tags.maxspeed) / 3.6 || 9),
       height: r.y0 + (r.y1 - r.y0) * t,
     });
@@ -203,7 +204,7 @@ export class CityPath {
     }
     return best;
   }
-  findNearestRoadPoint(x, z, out = {}, height) {
+  surfacePoint(x, z, out = {}, height) {
     let best = { d: Infinity };
     let candidates = this.grid.query(x, z, 100);
     if (!candidates.size) candidates = this.roads;
@@ -218,9 +219,15 @@ export class CityPath {
         (r.id === out.roadId ? 0.04 : 0);
       if (score < (best.score ?? Infinity)) best = { ...n, r, score };
     }
-    const route = this.routeNearest(x, z, out.distance || 0);
     this.sampleRoad(best.r, best.t, out);
+    out.surfaceDistance = best.d;
+    out.fraction = best.t;
     out.offset = (x - out.x) * out.nx + (z - out.z) * out.nz;
+    return out;
+  }
+  findNearestRoadPoint(x, z, out = {}, height) {
+    this.surfacePoint(x, z, out, height);
+    const route = this.routeNearest(x, z, out.distance || 0);
     let progress = route.s,
       score = Infinity;
     for (const g of Number.isFinite(height)
@@ -291,6 +298,9 @@ export class CityPath {
     v.heading = n.heading;
     v.pitch = n.pitch;
     v.speed = v.steer = v.throttle = v.override = 0;
+    v.wheelAngle = v.squat = 0;
+    v.wheelHeights = null;
+    v.roll = 0;
     this.findNearestRoadPoint(v.x, v.z, v.near, v.y);
   }
 }

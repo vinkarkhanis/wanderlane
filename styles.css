@@ -321,28 +321,69 @@ summary {
 #touch {
   display: none;
 }
-@media (pointer: coarse) {
+@media (any-pointer: coarse) {
   #touch {
     display: flex;
     position: fixed;
-    bottom: 150px;
-    left: 18px;
-    right: 18px;
-    gap: 10px;
+    bottom: max(150px, env(safe-area-inset-bottom));
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    justify-content: space-between;
+    pointer-events: none;
     touch-action: none;
   }
   #touch button {
-    font-size: 26px;
-    width: 62px;
-    height: 62px;
+    font-size: 28px;
+    width: clamp(64px, 8vw, 88px);
+    height: clamp(72px, 10vw, 94px);
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #b8d4cc88;
+    background: #183e40dc;
+    color: #f1f2dd;
+    pointer-events: auto;
     touch-action: none;
     user-select: none;
   }
-  #touch button:nth-child(3) {
-    margin-left: auto;
+  .touch-group {
+    display: flex;
+    gap: 10px;
+  }
+  #touch small {
+    font-size: 10px;
+    letter-spacing: 0.03em;
+  }
+  #touch button.pressed {
+    background: #c3dbbd;
+    color: #173b3d;
+    transform: translateY(2px);
+    box-shadow: 0 0 0 3px #d5e7c755;
   }
   #hint {
     display: none;
+  }
+}
+@media (any-pointer: coarse) and (max-height: 540px) {
+  #touch {
+    bottom: max(88px, env(safe-area-inset-bottom));
+  }
+  #touch button {
+    height: 64px;
+  }
+  #hud {
+    bottom: 20px;
+    left: 20px;
+  }
+  #speed {
+    font-size: 32px;
+  }
+  #driveStatus {
+    bottom: 28px;
+    right: 20px;
+    font-size: 13px;
   }
 }
 @media (max-width: 760px) {

@@ -16,6 +16,24 @@ export const PHYS = {
   brake: 9,
   wheelbase: 2.65,
   cruise: 23,
+  maxStep: 1 / 60,
+  maxDelta: 0.1,
+  steeringAngle: 0.56,
+  steeringSpeed: 11,
+  lateralAcceleration: 7.5,
+  steerIn: 4.8,
+  steerOut: 7.5,
+  suspensionRate: 18,
+  suspensionTravel: 0.045,
+  axles: [-1.4, 1.34],
+  halfTrack: 0.94,
+};
+export const CAMERA = { horizontal: 10, vertical: 4.5, pitch: 4 };
+export const CITY_DETAILS = {
+  spacing: 38,
+  clearance: 2.4,
+  signSpacing: 180,
+  budgets: { Low: 18, Medium: 30, High: 40 },
 };
 export const COLORS = [
   ["Lagoon", 0x477c7c],

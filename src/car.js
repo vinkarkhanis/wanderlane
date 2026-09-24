@@ -414,10 +414,17 @@ export class Car {
     this.group.position.set(v.x, v.y, v.z);
     this.group.rotation.set(0, v.heading, 0);
     this.body.rotation.x = -v.pitch + (reduced ? 0 : v.squat || 0);
-    this.body.rotation.z = reduced
-      ? 0
-      : -(v.steer || 0) * Math.min(Math.abs(v.speed) * 0.003, 0.07);
-    for (const w of this.front) w.rotation.y = (v.steer || 0) * 0.42;
+    this.body.rotation.z =
+      (v.roll || 0) +
+      (reduced
+        ? 0
+        : -(v.steer || 0) * Math.min(Math.abs(v.speed) * 0.003, 0.07));
+    this.wheels.forEach((wheel, i) => {
+      wheel.parent.position.y =
+        0.356 + (v.wheelHeights ? v.wheelHeights[i] - v.y : 0);
+    });
+    for (const w of this.front)
+      w.rotation.y = v.wheelAngle ?? (v.steer || 0) * 0.42;
     this.cockpit.update(v.speed, v.steer || 0, !!v.auto);
   }
   update(dt, speed, night, braking) {

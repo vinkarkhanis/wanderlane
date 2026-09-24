@@ -133,7 +133,12 @@ try {
   await page.keyboard.press("KeyP");
   await page.waitForFunction(() => window.wanderlane.state.paused);
   await page.keyboard.press("Escape");
-  await page.waitForFunction(() => !window.wanderlane.state.paused);
+  try {
+    await page.waitForFunction(() => !window.wanderlane.state.paused);
+  } catch (error) {
+    console.error("Resume diagnostics", await page.evaluate(() => ({ state: window.wanderlane.state, dialog: document.getElementById("settings").open, active: document.activeElement.outerHTML, hidden: document.hidden })), errors);
+    throw error;
+  }
   const touchPage = await browser.newPage({
     viewport: { width: 390, height: 844 },
     isMobile: true,

@@ -1,4 +1,29 @@
 export const round = (n) => Math.round(n * 100) / 100;
+// Barycentric height on an indexed mesh, used for the visible park surfaces.
+export function meshHeight(x, z, positions, indices) {
+  for (let i = 0; i < indices.length; i += 3) {
+    const a = indices[i] * 3,
+      b = indices[i + 1] * 3,
+      c = indices[i + 2] * 3;
+    const ax = positions[a],
+      az = positions[a + 2];
+    const bx = positions[b] - ax,
+      bz = positions[b + 2] - az;
+    const cx = positions[c] - ax,
+      cz = positions[c + 2] - az;
+    const det = bx * cz - bz * cx;
+    if (Math.abs(det) < 1e-8) continue;
+    const u = ((x - ax) * cz - (z - az) * cx) / det;
+    const v = (bx * (z - az) - bz * (x - ax)) / det;
+    if (u >= -1e-6 && v >= -1e-6 && u + v <= 1.000001)
+      return (
+        positions[a + 1] * (1 - u - v) +
+        positions[b + 1] * u +
+        positions[c + 1] * v
+      );
+  }
+  return -Infinity;
+}
 export const area = (r) =>
   Math.abs(
     r.reduce((s, p, i) => {

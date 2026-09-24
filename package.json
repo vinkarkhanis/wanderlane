@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/driving.test.js",
+    "test": "node --test tests/driving.test.js tests/improvements.test.js tests/ride.test.js",
+    "test:ride:browser": "node tests/ride-browser.mjs",
+    "test:improvements:browser": "node tests/improvements-browser.mjs",
     "serve": "python -m http.server 8123 --bind 127.0.0.1",
     "test:browser": "node tests/browser.mjs",
     "test:systems": "node tests/systems.mjs",

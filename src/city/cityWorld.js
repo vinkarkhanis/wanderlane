@@ -1,7 +1,8 @@
 import * as THREE from "three";
-import { inside, nearest } from "./spatial.js";
+import { inside, nearest, meshHeight } from "./spatial.js";
 import { random, hashSeed } from "../random.js";
 import { vegetationResources, addGroundDetail } from "../vegetation.js";
+import { detailCandidates, tileDetails } from "./cityDetails.js";
 export const SEASONS = ["Summer", "Monsoon", "Winter"];
 const colors = {
   Summer: [0x9b9566, 0xa5ae74, 0x414548],
@@ -98,6 +99,7 @@ export class CityWorld {
     this.wind = { value: 0 };
     this.controller = new AbortController();
     this.lastCell = "";
+    this.detailPlan = detailCandidates(path);
     this.resources();
   }
   resources() {
@@ -116,6 +118,7 @@ export class CityWorld {
       park: mat(0x6f8751),
       roof: mat(0x8b8b7a),
       trim: mat(0x7a817b),
+      fixture: mat(0xe8dec1, { emissive: 0xffd49a, emissiveIntensity: 0.15 }),
       box: new THREE.BoxGeometry(1, 1, 1),
     };
     addGroundDetail(this.res.terrain);
@@ -222,9 +225,11 @@ export class CityWorld {
     while (this.queue.length) this.activate(this.queue.shift());
     if (this.error) throw Error(this.error);
   }
-  update(v, time = 0, reduced = false, night = 0) {
+  update(v, time = 0, reduced = false, night = 0, sunset = false) {
     this.wind.value = reduced ? 0 : time;
     for (const m of this.facades) m.emissiveIntensity = night * 0.5;
+    this.res.fixture.emissiveIntensity =
+      0.15 + Math.max(night, sunset ? 0.25 : 0) * 3;
     const cx = Math.floor(v.x / 256),
       cz = Math.floor(v.z / 256),
       key = cx + "," + cz;
@@ -277,11 +282,25 @@ export class CityWorld {
   }
   heightAt(x, z) {
     const c = this.chunks.get(Math.floor(x / 256) + "," + Math.floor(z / 256));
-    return c ? this.terrainHeight(c.data, x, z) : this.path.heightAt(x, z);
+    let y =
+      (c ? this.terrainHeight(c.data, x, z) : this.path.heightAt(x, z)) - 0.22;
+    for (const s of c?.groundSurfaces || []) {
+      if (
+        x < s.bounds[0] ||
+        z < s.bounds[1] ||
+        x > s.bounds[2] ||
+        z > s.bounds[3]
+      )
+        continue;
+      y = Math.max(y, meshHeight(x, z, s.positions, s.indices));
+    }
+    return y;
   }
   activate(data) {
     const group = new THREE.Group(),
       geometries = [],
+      owned = [],
+      groundSurfaces = [],
       parts = new Map(),
       add = (g, m) => {
         if (!parts.has(m)) parts.set(m, []);
@@ -480,13 +499,86 @@ export class CityWorld {
         for (let i = 0; i < p.count; i++)
           p.setY(i, this.terrainHeight(data, p.getX(i), p.getZ(i)) + 0.005);
         g.computeVertexNormals();
+        g.computeBoundingBox();
+        groundSurfaces.push({
+          positions: p.array,
+          indices: g.index.array,
+          bounds: [
+            g.boundingBox.min.x,
+            g.boundingBox.min.z,
+            g.boundingBox.max.x,
+            g.boundingBox.max.z,
+          ],
+        });
         add(g, this.res.park);
       }
     }
     const rng = random(hashSeed(data.id)),
       trees = [[], [], []],
       grass = [];
+    const details = tileDetails(data, this.detailPlan, this.quality);
+    const signs = details.filter((p) => p.kind === "sign").slice(0, 8);
+    let signMaterial;
+    if (signs.length) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1024;
+      canvas.height = signs.length * 128;
+      const ctx = canvas.getContext("2d");
+      signs.forEach((p, i) => {
+        ctx.fillStyle = "#214d49";
+        ctx.fillRect(0, i * 128, 1024, 128);
+        ctx.strokeStyle = "#e8e8cf";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(8, i * 128 + 8, 1008, 112);
+        ctx.fillStyle = "#f3f1da";
+        let size = 58;
+        do {
+          ctx.font = `600 ${size--}px sans-serif`;
+        } while (ctx.measureText(p.name).width > 960 && size > 20);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(p.name, 512, i * 128 + 64);
+      });
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      signMaterial = new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.8,
+        emissiveMap: texture,
+        emissive: 0xffffff,
+        emissiveIntensity: 0.3,
+      });
+      owned.push(texture, signMaterial);
+    }
+    for (const p of details) {
+      const h = this.terrainHeight(data, p.x, p.z) - 0.22;
+      if (p.kind === "tree") {
+        trees[1].push([p.x, h, p.z, 0.7, 0.85, 0.7, p.yaw]);
+      } else if (p.kind === "lamp") {
+        block(p.x, h + 3.2, p.z, 0.14, 6.4, 0.14, 0, this.res.trim);
+        block(p.x, h + 6.35, p.z, 1.5, 0.12, 0.18, p.yaw, this.res.trim);
+        block(p.x, h + 6.24, p.z, 1.15, 0.12, 0.4, p.yaw, this.res.fixture);
+      } else if (p.kind === "box") {
+        block(p.x, h + 0.55, p.z, 0.75, 1.1, 0.45, p.yaw, this.res.trim);
+        block(p.x, h + 1.12, p.z, 0.84, 0.08, 0.53, p.yaw, this.res.roof);
+      } else if (signs.includes(p)) {
+        block(p.x, h + 1.5, p.z, 0.09, 3, 0.09, 0, this.res.trim);
+        const i = signs.indexOf(p);
+        for (const flip of [0, Math.PI]) {
+          const g = new THREE.PlaneGeometry(3.6, 0.48);
+          const uv = g.attributes.uv;
+          for (let j = 0; j < uv.count; j++)
+            uv.setY(j, (signs.length - i - 1 + uv.getY(j)) / signs.length);
+          g.translate(0, 0, 0.015);
+          g.rotateY(p.yaw + flip);
+          g.translate(p.x, h + 2.9, p.z);
+          add(g, signMaterial);
+        }
+      }
+    }
     const safe = (x, z) => {
+      if (details.some((p) => Math.hypot(p.x - x, p.z - z) < p.radius + 4))
+        return false;
       const near = this.path.findNearestRoadPoint(x, z, {});
       if (Math.abs(near.offset) < near.width / 2 + 5) return false;
       return (
@@ -567,6 +659,9 @@ export class CityWorld {
     this.chunks.set(data.id, {
       group,
       geometries,
+      owned,
+      groundSurfaces,
+      details,
       data,
       trees: trees.reduce((n, t) => n + t.length, 0),
     });
@@ -609,6 +704,7 @@ export class CityWorld {
     const c = this.chunks.get(id);
     c.group.removeFromParent();
     for (const g of c.geometries) g.dispose();
+    for (const resource of c.owned) resource.dispose();
     c.group.traverse((o) => {
       if (o.isInstancedMesh) o.dispose();
     });
@@ -624,14 +720,20 @@ export class CityWorld {
   }
   get stats() {
     let buildings = 0,
-      vegetation = 0;
+      vegetation = 0,
+      details = 0,
+      signs = 0;
     for (const c of this.chunks.values()) {
       buildings += c.data.buildings.length;
       vegetation += c.trees;
+      details += c.details.length;
+      signs += Math.min(8, c.details.filter((p) => p.kind === "sign").length);
     }
     return {
       buildings,
       vegetation,
+      details,
+      signs,
       pending: this.pending.size,
       queued: this.queue.length,
       error: this.error,

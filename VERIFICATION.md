@@ -172,3 +172,67 @@ remain outstanding; no real elevation dataset has been added.
 Current stopping point: a playable imported-city pilot with improved junction
 navigation and bridge contact. Next: verified licensed DEM ingestion and terrain
 alignment, then signal/intersection right-of-way behavior and Pune-specific art.
+
+## Driving, camera and city details — 2026-09-24
+
+Baseline: the original 7 driving tests, 9 Pune tests and desktop/mobile browser
+suite passed before the implementation. Added tests cover progressive steering,
+reverse coasting/brake priority, simultaneous pointer ownership and cleanup,
+continuous road-edge height, wheel-footprint pitch, park triangles, elevated approach contact,
+large-delta substeps, deterministic prop placement, name validation and deduplication.
+
+Browser verification uses installed Chrome and the local server. It exercises
+18 controlled entry/exit runs at 5/18/35 m/s and 0.2/0.55/1.1 radians, steering
+maneuvers at all three speeds, keyboard driving, four off-road camera views, and
+real simultaneous touch contacts through Chrome's input protocol. Touch layouts
+are captured at 390×844 and 844×390. The existing browser suites cover braking
+into reverse, Return to Road, auto-drive, all biomes/cameras, reduced motion,
+Pune day/sunset/night, settings and all quality levels. Screenshots were reviewed.
+
+The artificial 8 cm rapid-height camera test reduced total vertical camera
+travel to about 6.2% of the input travel with the final single-stage vertical filter; this measures high-frequency rejection,
+not general camera latency. Longer off-road runs include natural hill slopes;
+tests bound changes per step rather than expecting a level body on a hill.
+All 18 final runs crossed between asphalt and off-road. Maximum body-height change
+was 0.063 m per 1/60-second step, with maximum pitch change 0.0155 radians per step.
+
+Pune's streamed full loop completed with a 3.68 m maximum route-centre distance
+and <=25 active chunks. Twelve relocation/season cycles returned to identical
+per-location resource counts: 178/193 geometries and 12/18 textures in the
+isolated world test. The remaining 14 geometries/2 textures after world and car
+disposal belong to the test's retained environment. Endless-world disposal
+returned to zero geometries/textures. New sign atlases/materials are chunk-owned.
+
+The Pune browser sample measured 11.2 ms median / 13.3 ms p95 frame intervals.
+Environment quality samples measured 7.0/13.8/13.8 ms medians for Low/Medium/High.
+These are local-machine samples, not a mobile hardware certification. No console
+errors were reported. Street fixtures add zero dynamic lights; geometry is batched
+by material and roadside trees share the existing instanced tree resources.
+
+Commands: `npm test`, `npm run test:pune`, `npm run test:browser`,
+`npm run test:improvements:browser`, `npm run test:systems`,
+`npm run test:pune:world`, `npm run test:pune:browser`, `npm run test:car`,
+`npm run test:environment`, `npm run build`, `npm run test:pune:deployment`.
+JSON reports and screenshots are generated under `tests/` and remain git-ignored.
+
+Limits: Pune elevation is still synthetic; complex imported junction geometry,
+traffic signals and real-phone ergonomics need broader field testing. This is
+lightweight ground-following suspension, not an airborne rigid-body simulation.
+
+### Pune paved-road judder follow-up
+
+The previous pass filtered terrain motion but missed a render-clock mismatch:
+physics steps at 60 Hz were shown directly while the camera moved each display
+frame. The 300-frame Pune driving sample repeated the physical car position on
+131 frames. `VehiclePose` now interpolates position, heading, body attitude and
+wheel contact between simulation ticks; the car, camera, environment anchors and
+particles share that visual pose. Chase/wide cameras smooth their orbit rather
+than separately delaying world translation. Collision and steering physics are
+unchanged; interpolation adds at most one 16.7 ms tick of presentation latency.
+
+`npm run test:ride:browser` verifies 30/60/90/120/144/165 Hz presentation, camera
+screen stability, actual Pune driving, camera cycling and Return to Road. The
+Pune sample now has zero repeated rendered positions. Unit regressions also cover
+uneven display intervals, heading wrap, wheel contact, pause and teleport resets.
+Reports are written to `tests/ride-results.json`; all browser console errors are
+checked. These replace the earlier terrain-only checks as the smoothness test.
