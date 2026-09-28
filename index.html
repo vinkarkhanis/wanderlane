@@ -55,6 +55,50 @@
       rel="noopener"
       >Map data © OpenStreetMap contributors, available under ODbL 1.0.</a
     >
+    <section id="cityTrip" aria-label="Pune city journey" hidden>
+      <div id="tripEyebrow" class="trip-eyebrow"></div>
+      <h2 id="tripTitle">Evening Chai Run</h2>
+      <label id="discoveryChoice"
+        >Discovery drive
+        <select id="discoveryDrive">
+          <option value="evening-chai-run">
+            Evening Chai Run · original journey
+          </option>
+          <option value="baner-evening">Baner Evening Drive · 2.6 km</option>
+          <option value="monsoon-pashan">Monsoon Pashan Drive · 2.2 km</option>
+        </select>
+      </label>
+      <p id="tripObjective" role="status"></p>
+      <p id="tripGuidance"></p>
+      <p id="tripMarathi" lang="mr"></p>
+      <p id="tripSecondary"></p>
+      <progress
+        id="tripProgress"
+        max="1"
+        value="0"
+        aria-label="Journey progress"
+      ></progress>
+      <div class="trip-actions">
+        <button id="tripStart">Start drive</button
+        ><button id="tripCancel" hidden>Free roam</button>
+        <button id="postcardBtn" hidden>Take a postcard</button>
+      </div>
+      <details id="discoveryJournal">
+        <summary>Discovery journal</summary>
+        <p id="journalEntries">
+          Take the long way. Your discoveries stay for this visit.
+        </p>
+      </details>
+    </section>
+    <dialog id="postcardDialog" aria-label="Your Pune postcard">
+      <img id="postcardImage" alt="Your view of the Baner chai scene" />
+      <p>
+        A pause for chai · Baner<br /><small
+          >Original local-style scene · synthetic terrain</small
+        >
+      </p>
+      <form method="dialog"><button>Back to the drive</button></form>
+    </dialog>
     <div id="toast" role="status" aria-live="polite"></div>
     <div id="touch" aria-label="Touch driving controls">
       <div class="touch-group" role="group" aria-label="Steering">

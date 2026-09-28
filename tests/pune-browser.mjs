@@ -65,7 +65,7 @@ try {
     await page.waitForTimeout(300);
     const s = await state();
     report["traffic" + (i % 3)] = s.trafficCars;
-    assert.equal(s.trafficCars.length, [0, 3, 7][i % 3]);
+    assert.equal(s.trafficCars.length, [0, 5, 11][i % 3]);
     assert.ok(s.trafficCars.every((c) => c.lane < 0));
     for (const c of s.trafficCars.filter((c) => c.visible))
       assert.ok(Math.abs(c.s - s.roadDistance) > 40);

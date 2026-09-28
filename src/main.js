@@ -1,6 +1,14 @@
 import { CityPath } from "./city/cityPath.js";
 import { CityWorld, SEASONS } from "./city/cityWorld.js";
 import { CityTraffic } from "./city/cityTraffic.js";
+import { CityExperience, chaiTrip } from "./city/cityExperience.js";
+import {
+  DiscoveryJournal,
+  discoveryTrip,
+  POSTCARD,
+} from "./city/puneDiscovery.js";
+import { CitySignals } from "./city/citySignals.js";
+import { CityTripUI } from "./city/cityTripUI.js";
 import * as THREE from "three";
 import { RoadPath } from "./roadPath.js";
 import { WorldManager } from "./worldManager.js";
@@ -35,7 +43,10 @@ const scene = new THREE.Scene(),
   env = new Environment(scene, renderer),
   audio = new AudioSystem(),
   particles = new Particles(scene);
+const journal = new DiscoveryJournal();
 let endlessLane = 2;
+let experience = null,
+  signals = null;
 let driveMode = "endless",
   season = "Summer",
   cityData = null,
@@ -55,6 +66,36 @@ let seed = String(saved.seed || "aster-2026"),
   reduced =
     !!saved.reduced || matchMedia("(prefers-reduced-motion: reduce)").matches;
 const car = new Car(scene, COLORS[0][1]);
+const tripUI = new CityTripUI(
+  async () => {
+    if (!experience || switching) return;
+    controls.clear();
+    auto = false;
+    chooseDiscovery();
+    vehicle.reset(experience.definition.start, -1.6);
+    signals.reset(vehicle.near.distance);
+    signals.time = 0;
+    experience.start();
+    traffic.setMode(traffic.mode, vehicle);
+    env.mode = experience.definition.time ?? 2;
+    if (experience.definition.season) {
+      season = experience.definition.season;
+      world.setSeason(season);
+      el("puneSeason").value = season;
+    }
+    rig.snap = true;
+    try {
+      await world.ready(vehicle);
+    } catch (error) {
+      experience?.cancel();
+      toast("The trip could not load: " + error.message);
+    }
+    updateLabels();
+  },
+  () => {
+    experience?.cancel();
+  },
+);
 world = makeWorld();
 traffic = new Traffic(scene, path);
 world.update(vehicle.near.distance, 0, reduced, true);
@@ -130,16 +171,30 @@ async function switchMode() {
       nextPath.resolveContacts = (v, dt) => nextWorld.constrain(v, dt);
     }
     const trafficMode = traffic.mode;
+    experience?.dispose();
+    signals?.dispose();
     world.dispose();
     traffic.dispose();
     path = nextPath;
     vehicle = nextVehicle;
     world = nextWorld;
     driveMode = requested;
+    experience = driveMode === "pune" ? new CityExperience(path) : null;
+    if (experience) {
+      experience.journal = journal;
+      chooseDiscovery();
+    }
+    signals = driveMode === "pune" ? new CitySignals(path) : null;
+    if (signals) {
+      world.signals = signals;
+      world.experience = experience;
+    }
     traffic =
       driveMode === "pune"
         ? new CityTraffic(scene, path)
         : new Traffic(scene, path);
+    traffic.signals = signals;
+    traffic.quality = quality;
     traffic.setMode(trafficMode, vehicle);
     auto = false;
     rig.snap = true;
@@ -183,14 +238,23 @@ function persist() {
     engine: audio.engine,
     ambience: audio.ambience,
     muted: audio.muted,
+    traffic: traffic?.mode ?? 0,
   });
 }
 function setQuality() {
   quality = el("quality").value;
+  if (path.city) {
+    traffic.quality = quality;
+    traffic.setMode(traffic.mode, vehicle);
+  }
   renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY[quality].dpr));
   renderer.setSize(innerWidth, innerHeight);
   world.dispose();
   world = makeWorld();
+  if (signals && driveMode === "pune") {
+    world.signals = signals;
+    world.experience = experience;
+  }
   updateWorld(true);
   persist();
 }
@@ -209,6 +273,10 @@ function setShadows() {
 function rebuild() {
   world.dispose();
   world = makeWorld();
+  if (signals && driveMode === "pune") {
+    world.signals = signals;
+    world.experience = experience;
+  }
   updateWorld(true);
 }
 function returnToRoad() {
@@ -221,6 +289,8 @@ function returnToRoad() {
   traffic.clearNear(nearest.distance);
   if (path.city) path.resetNearest(vehicle);
   else vehicle.reset(nearest.distance, vehicle.lane);
+  signals?.reset(vehicle.near.distance);
+  signals?.reset(vehicle.near.distance);
   rig.snap = true;
   toast("Back on the road. Take your time.");
 }
@@ -254,6 +324,10 @@ function updateLabels() {
 }
 function pause() {
   if (!started) return;
+  if (el("postcardDialog").open) {
+    el("postcardDialog").close();
+    return;
+  }
   if (el("settings").open) {
     el("settings").close();
     return;
@@ -305,6 +379,7 @@ const controls = new Controls({
   return: returnToRoad,
   traffic() {
     traffic.setMode((traffic.mode + 1) % 3, vehicle);
+    persist();
     updateLabels();
   },
   mute() {
@@ -314,6 +389,36 @@ const controls = new Controls({
     updateLabels();
   },
   pause,
+});
+function chooseDiscovery() {
+  if (!experience) return;
+  const id = el("discoveryDrive").value;
+  experience.definition =
+    id === "evening-chai-run" ? chaiTrip(path) : discoveryTrip(path, id);
+  experience.reset();
+}
+el("discoveryDrive").addEventListener("change", () => {
+  if (experience?.status !== "active") chooseDiscovery();
+});
+function canPostcard() {
+  if (!path.city || Math.abs(vehicle.speed) > 0.8 || paused) return false;
+  const p = path.sampleAtDistance(POSTCARD.s, {});
+  return Math.hypot(vehicle.x - p.x, vehicle.z - p.z) < POSTCARD.radius;
+}
+el("postcardBtn").addEventListener("click", () => {
+  if (!canPostcard()) return;
+  controls.clear();
+  auto = false;
+  paused = true;
+  renderer.render(scene, rig.cam);
+  el("postcardImage").src = renderer.domElement.toDataURL("image/png");
+  journal.postcard(POSTCARD.id);
+  el("postcardDialog").showModal();
+  updateLabels();
+});
+el("postcardDialog").addEventListener("close", () => {
+  controls.clear();
+  paused = switching || el("settings").open;
 });
 el("settings").addEventListener("close", () => {
   paused = switching;
@@ -339,6 +444,7 @@ for (const [id, key, defaultValue] of [
   });
 }
 audio.muted = !!saved.muted;
+traffic.setMode([0, 1, 2].includes(saved.traffic) ? saved.traffic : 0, vehicle);
 el("driveMode").addEventListener("change", switchMode);
 el("puneSeason").addEventListener("change", () => {
   season = el("puneSeason").value;
@@ -349,6 +455,7 @@ el("quality").addEventListener("change", setQuality);
 el("shadows").addEventListener("change", setShadows);
 el("traffic").addEventListener("change", () => {
   traffic.setMode(el("traffic").selectedIndex, vehicle);
+  persist();
   updateLabels();
 });
 el("lane").addEventListener(
@@ -419,6 +526,12 @@ function loop(now) {
     while (accumulator >= step) {
       presentation.capture(vehicle);
       vehicle.update(step, input, auto, biome, traffic);
+      const violations = signals?.update(step, vehicle) || 0;
+      experience?.update(step, vehicle, violations);
+      if (experience?.status === "completed" && auto) {
+        auto = false;
+        updateLabels();
+      }
       traffic.update(step, vehicle, env.night);
       accumulator -= step;
       time += step;
@@ -460,9 +573,39 @@ function loop(now) {
     if (material?.isMaterial) material.envMapIntensity = 0.5 - env.night * 0.44;
   particles.update(visual, biome, env.night, time, reduced);
   rig.update(visual, dt, reduced, car);
-  audio.update(vehicle, env.night, paused);
+  audio.update(
+    vehicle,
+    env.night,
+    paused,
+    driveMode === "pune"
+      ? {
+          district:
+            experience?.definition.objectives[experience.objectiveIndex]
+              ?.district ?? "Pashan approach",
+          season,
+          time: experience?.status === "active" ? experience.elapsed : time,
+        }
+      : null,
+  );
   hudTime += dt;
   if (hudTime > 0.15) {
+    el("postcardBtn").hidden = !canPostcard();
+    const entries = journal.snapshot;
+    const journalText =
+      [
+        ...entries.drives.map((d) => `${d.name} · ${d.quality}`),
+        ...entries.scenes.map((s) => `${s.label} — ${s.provenance}`),
+        ...entries.postcards.map(
+          () => "A pause for chai · postcard saved for this visit",
+        ),
+      ].join("\n") ||
+      "Take the long way. Your discoveries stay for this visit.";
+    if (el("journalEntries").textContent !== journalText)
+      el("journalEntries").textContent = journalText;
+    tripUI.update(
+      experience?.snapshot,
+      started && !paused && driveMode === "pune",
+    );
     el("speed").textContent = Math.round(Math.abs(vehicle.speed) * 3.6);
     el("dist").textContent = vehicle.dist.toFixed(2);
     el("surface").textContent = (vehicle.surface || "Asphalt").toUpperCase();
@@ -490,14 +633,34 @@ window.wanderlane = {
       frameMs,
       driveMode,
       season,
-      city: driveMode === "pune" ? world.stats : null,
+      city:
+        driveMode === "pune"
+          ? {
+              ...world.stats,
+              trafficTypes: traffic.cars.reduce(
+                (counts, c) => {
+                  counts[c.car.type]++;
+                  return counts;
+                },
+                { car: 0, rickshaw: 0, scooter: 0, bus: 0 },
+              ),
+            }
+          : null,
+      journal: journal.snapshot,
+      experience: experience?.snapshot ?? { available: false },
       biome,
       time: TIMES[env.mode],
       auto,
       paused,
       camera: rig.mode,
       traffic: traffic.mode,
+      collisions: traffic.collisions.snapshot,
+      impact: {
+        lateralSpeed: Math.hypot(vehicle.impactVX || 0, vehicle.impactVZ || 0),
+        yawRate: vehicle.impactYaw || 0,
+      },
       speed: vehicle.speed,
+      heading: vehicle.heading,
       distance: vehicle.dist,
       roadDistance: vehicle.near.distance,
       offset: vehicle.near.offset,
@@ -509,11 +672,16 @@ window.wanderlane = {
       triangles: renderer.info.render.triangles,
       headlights: car.lights.map((l) => l.intensity),
       trafficCars: traffic.cars.map((c) => ({
+        variant: c.car.variant || "car",
         s: c.s,
         lane: c.lane,
         speed: c.speed,
         visible: c.car.group.visible,
         waiting: !!c.waiting,
+        type: c.car.type || "car",
+        impactOffset: Math.hypot(c.impactX || 0, c.impactZ || 0),
+        impactYaw: c.impactHeading || 0,
+        position: { x: c.sample.x, y: c.sample.y, z: c.sample.z },
       })),
       position: { x: vehicle.x, y: vehicle.y, z: vehicle.z },
       renderPosition: {
@@ -527,6 +695,7 @@ window.wanderlane = {
       instrumentSpeed: car.cockpit.lastSpeed,
       muted: audio.muted,
       audioStatus: audio.status,
+      audioNodes: audio.nodes?.length ?? 0,
       quality,
       reduced,
     };

@@ -1,5 +1,6 @@
 import { PHYS, ROAD, damp, clamp, angleDelta } from "./config.js";
 import { terrainHeight } from "./heightfield.js";
+import { clearImpact, integrateImpact } from "./vehicleCollisions.js";
 // Bicycle steering with a smooth speed curve and a tyre lateral-force budget.
 export function steeringAngle(speed) {
   return (
@@ -86,6 +87,7 @@ export class Vehicle {
     this.reset(40, 0);
   }
   reset(distance = this.near.distance, offset = this.lane) {
+    clearImpact(this);
     const p = this.path.getLanePosition(distance, offset, this.near);
     this.x = p.x;
     this.z = p.z;
@@ -221,6 +223,7 @@ export class Vehicle {
     this.heading += clamp(yaw, -yawLimit, yawLimit) * dt;
     this.x += Math.sin(this.heading) * this.speed * dt;
     this.z += Math.cos(this.heading) * this.speed * dt;
+    integrateImpact(this, dt);
     this.path.findNearestRoadPoint(this.x, this.z, p, this.y);
     this.path.constrainRoad?.(this, dt);
     if (

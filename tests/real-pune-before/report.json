@@ -1,0 +1,585 @@
+{
+  "reports": [
+    {
+      "seed": "aster-2026",
+      "frameMs": 11.26331792458643,
+      "driveMode": "pune",
+      "season": "Summer",
+      "city": {
+        "buildings": 319,
+        "vegetation": 657,
+        "details": 184,
+        "signs": 12,
+        "pending": 0,
+        "queued": 0,
+        "error": null,
+        "signals": {
+          "active": 3,
+          "red": 0,
+          "amber": 0,
+          "green": 3,
+          "time": 3.399999999999993,
+          "lights": [
+            {
+              "id": 247431934,
+              "s": 2047.1200000000008,
+              "node": [
+                698.73,
+                -332.14
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 2835.539999999999,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 7018.550000000001,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            }
+          ]
+        },
+        "actors": {
+          "pedestrians": 3,
+          "stalls": 1,
+          "busStops": 0,
+          "scenes": [
+            "evening-chai-crowd"
+          ]
+        },
+        "signalHeads": 0,
+        "trafficTypes": {
+          "car": 0,
+          "rickshaw": 0,
+          "scooter": 0,
+          "bus": 0
+        }
+      },
+      "experience": {
+        "available": true,
+        "tripId": "evening-chai-run",
+        "name": "Evening Chai Run",
+        "description": "A relaxed sunset drive from the Baner High Street area toward Pashan Lake.",
+        "status": "active",
+        "objectiveIndex": 0,
+        "objectiveLabel": "Leave Baner · Pancard Club Road",
+        "nextDistance": 1480.750000000009,
+        "remaining": 5975.750000000009,
+        "distance": 5975.750000000009,
+        "progress": 0,
+        "elapsed": 3.399999999999993,
+        "quality": "Smooth",
+        "reason": "Gentle braking and a steady line. Time well spent.",
+        "hardBrakes": 0,
+        "offRoadTime": 0,
+        "routeDepartures": 0,
+        "redLightViolations": 0,
+        "eventsSeen": [
+          "evening-chai-crowd"
+        ],
+        "road": "the local road",
+        "marathi": "",
+        "district": "Baner"
+      },
+      "biome": "meadow",
+      "time": "Day",
+      "auto": false,
+      "paused": false,
+      "camera": 0,
+      "traffic": 0,
+      "collisions": {
+        "count": 0,
+        "last": null
+      },
+      "impact": {
+        "lateralSpeed": 0,
+        "yawRate": 0
+      },
+      "speed": 0,
+      "heading": 2.290980235748249,
+      "distance": 0,
+      "roadDistance": 9690,
+      "offset": -0.05059400941338163,
+      "surface": "Asphalt",
+      "chunks": 25,
+      "geometries": 153,
+      "textures": 12,
+      "drawCalls": 215,
+      "triangles": 323650,
+      "headlights": [
+        0.29282751778111077,
+        0.29282751778111077
+      ],
+      "trafficCars": [],
+      "position": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "renderPosition": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "cameraPosition": [
+        -1158.669341159768,
+        -1.279407088259259,
+        -194.1833320112916
+      ],
+      "cockpitVisible": false,
+      "steeringWheelAngle": 0,
+      "instrumentSpeed": 0,
+      "muted": false,
+      "audioStatus": "Sound enabled",
+      "audioNodes": 16,
+      "quality": "Medium",
+      "reduced": false
+    },
+    {
+      "seed": "aster-2026",
+      "frameMs": 10.398989882698519,
+      "driveMode": "pune",
+      "season": "Summer",
+      "city": {
+        "buildings": 319,
+        "vegetation": 657,
+        "details": 184,
+        "signs": 12,
+        "pending": 0,
+        "queued": 0,
+        "error": null,
+        "signals": {
+          "active": 3,
+          "red": 0,
+          "amber": 0,
+          "green": 3,
+          "time": 6.283333333333316,
+          "lights": [
+            {
+              "id": 247431934,
+              "s": 2047.1200000000008,
+              "node": [
+                698.73,
+                -332.14
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 2835.539999999999,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 7018.550000000001,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            }
+          ]
+        },
+        "actors": {
+          "pedestrians": 3,
+          "stalls": 1,
+          "busStops": 0,
+          "scenes": [
+            "evening-chai-crowd"
+          ]
+        },
+        "signalHeads": 0,
+        "trafficTypes": {
+          "car": 0,
+          "rickshaw": 0,
+          "scooter": 0,
+          "bus": 0
+        }
+      },
+      "experience": {
+        "available": true,
+        "tripId": "evening-chai-run",
+        "name": "Evening Chai Run",
+        "description": "A relaxed sunset drive from the Baner High Street area toward Pashan Lake.",
+        "status": "active",
+        "objectiveIndex": 0,
+        "objectiveLabel": "Leave Baner · Pancard Club Road",
+        "nextDistance": 1480.750000000009,
+        "remaining": 5975.750000000009,
+        "distance": 5975.750000000009,
+        "progress": 0,
+        "elapsed": 6.283333333333316,
+        "quality": "Smooth",
+        "reason": "Gentle braking and a steady line. Time well spent.",
+        "hardBrakes": 0,
+        "offRoadTime": 0,
+        "routeDepartures": 0,
+        "redLightViolations": 0,
+        "eventsSeen": [
+          "evening-chai-crowd"
+        ],
+        "road": "the local road",
+        "marathi": "",
+        "district": "Baner"
+      },
+      "biome": "meadow",
+      "time": "Sunset",
+      "auto": false,
+      "paused": false,
+      "camera": 0,
+      "traffic": 0,
+      "collisions": {
+        "count": 0,
+        "last": null
+      },
+      "impact": {
+        "lateralSpeed": 0,
+        "yawRate": 0
+      },
+      "speed": 0,
+      "heading": 2.290980235748249,
+      "distance": 0,
+      "roadDistance": 9690,
+      "offset": -0.05059400941338163,
+      "surface": "Asphalt",
+      "chunks": 25,
+      "geometries": 153,
+      "textures": 12,
+      "drawCalls": 215,
+      "triangles": 323650,
+      "headlights": [
+        0.0069723948460419394,
+        0.0069723948460419394
+      ],
+      "trafficCars": [],
+      "position": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "renderPosition": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "cameraPosition": [
+        -1158.669341159768,
+        -1.2794070884094828,
+        -194.1833320112916
+      ],
+      "cockpitVisible": false,
+      "steeringWheelAngle": 0,
+      "instrumentSpeed": 0,
+      "muted": false,
+      "audioStatus": "Sound enabled",
+      "audioNodes": 16,
+      "quality": "Medium",
+      "reduced": false
+    },
+    {
+      "seed": "aster-2026",
+      "frameMs": 11.666328105351015,
+      "driveMode": "pune",
+      "season": "Summer",
+      "city": {
+        "buildings": 319,
+        "vegetation": 657,
+        "details": 184,
+        "signs": 12,
+        "pending": 0,
+        "queued": 0,
+        "error": null,
+        "signals": {
+          "active": 3,
+          "red": 0,
+          "amber": 0,
+          "green": 3,
+          "time": 9.066666666666697,
+          "lights": [
+            {
+              "id": 247431934,
+              "s": 2047.1200000000008,
+              "node": [
+                698.73,
+                -332.14
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 2835.539999999999,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 7018.550000000001,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            }
+          ]
+        },
+        "actors": {
+          "pedestrians": 3,
+          "stalls": 1,
+          "busStops": 0,
+          "scenes": [
+            "evening-chai-crowd"
+          ]
+        },
+        "signalHeads": 0,
+        "trafficTypes": {
+          "car": 0,
+          "rickshaw": 0,
+          "scooter": 0,
+          "bus": 0
+        }
+      },
+      "experience": {
+        "available": true,
+        "tripId": "evening-chai-run",
+        "name": "Evening Chai Run",
+        "description": "A relaxed sunset drive from the Baner High Street area toward Pashan Lake.",
+        "status": "active",
+        "objectiveIndex": 0,
+        "objectiveLabel": "Leave Baner · Pancard Club Road",
+        "nextDistance": 1480.750000000009,
+        "remaining": 5975.750000000009,
+        "distance": 5975.750000000009,
+        "progress": 0,
+        "elapsed": 9.066666666666697,
+        "quality": "Smooth",
+        "reason": "Gentle braking and a steady line. Time well spent.",
+        "hardBrakes": 0,
+        "offRoadTime": 0,
+        "routeDepartures": 0,
+        "redLightViolations": 0,
+        "eventsSeen": [
+          "evening-chai-crowd"
+        ],
+        "road": "the local road",
+        "marathi": "",
+        "district": "Baner"
+      },
+      "biome": "meadow",
+      "time": "Night",
+      "auto": false,
+      "paused": false,
+      "camera": 0,
+      "traffic": 0,
+      "collisions": {
+        "count": 0,
+        "last": null
+      },
+      "impact": {
+        "lateralSpeed": 0,
+        "yawRate": 0
+      },
+      "speed": 0,
+      "heading": 2.290980235748249,
+      "distance": 0,
+      "roadDistance": 9690,
+      "offset": -0.05059400941338163,
+      "surface": "Asphalt",
+      "chunks": 25,
+      "geometries": 154,
+      "textures": 12,
+      "drawCalls": 212,
+      "triangles": 322930,
+      "headlights": [
+        174.48872660929638,
+        174.48872660929638
+      ],
+      "trafficCars": [],
+      "position": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "renderPosition": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "cameraPosition": [
+        -1158.669341159768,
+        -1.2794070884094846,
+        -194.1833320112916
+      ],
+      "cockpitVisible": false,
+      "steeringWheelAngle": 0,
+      "instrumentSpeed": 0,
+      "muted": false,
+      "audioStatus": "Sound enabled",
+      "audioNodes": 16,
+      "quality": "Medium",
+      "reduced": false
+    },
+    {
+      "seed": "aster-2026",
+      "frameMs": 10.462353933563824,
+      "driveMode": "pune",
+      "season": "Monsoon",
+      "city": {
+        "buildings": 319,
+        "vegetation": 657,
+        "details": 184,
+        "signs": 12,
+        "pending": 0,
+        "queued": 0,
+        "error": null,
+        "signals": {
+          "active": 3,
+          "red": 0,
+          "amber": 1,
+          "green": 2,
+          "time": 11.96666666666684,
+          "lights": [
+            {
+              "id": 247431934,
+              "s": 2047.1200000000008,
+              "node": [
+                698.73,
+                -332.14
+              ],
+              "phase": "amber"
+            },
+            {
+              "id": 2476292433,
+              "s": 2835.539999999999,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 7018.550000000001,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            }
+          ]
+        },
+        "actors": {
+          "pedestrians": 3,
+          "stalls": 1,
+          "busStops": 0,
+          "scenes": [
+            "evening-chai-crowd"
+          ]
+        },
+        "signalHeads": 0,
+        "trafficTypes": {
+          "car": 0,
+          "rickshaw": 0,
+          "scooter": 0,
+          "bus": 0
+        }
+      },
+      "experience": {
+        "available": true,
+        "tripId": "evening-chai-run",
+        "name": "Evening Chai Run",
+        "description": "A relaxed sunset drive from the Baner High Street area toward Pashan Lake.",
+        "status": "active",
+        "objectiveIndex": 0,
+        "objectiveLabel": "Leave Baner · Pancard Club Road",
+        "nextDistance": 1480.750000000009,
+        "remaining": 5975.750000000009,
+        "distance": 5975.750000000009,
+        "progress": 0,
+        "elapsed": 11.96666666666684,
+        "quality": "Smooth",
+        "reason": "Gentle braking and a steady line. Time well spent.",
+        "hardBrakes": 0,
+        "offRoadTime": 0,
+        "routeDepartures": 0,
+        "redLightViolations": 0,
+        "eventsSeen": [
+          "evening-chai-crowd"
+        ],
+        "road": "the local road",
+        "marathi": "",
+        "district": "Baner"
+      },
+      "biome": "meadow",
+      "time": "Day",
+      "auto": false,
+      "paused": false,
+      "camera": 0,
+      "traffic": 0,
+      "collisions": {
+        "count": 0,
+        "last": null
+      },
+      "impact": {
+        "lateralSpeed": 0,
+        "yawRate": 0
+      },
+      "speed": 0,
+      "heading": 2.290980235748249,
+      "distance": 0,
+      "roadDistance": 9690,
+      "offset": -0.05059400941338163,
+      "surface": "Asphalt",
+      "chunks": 25,
+      "geometries": 154,
+      "textures": 12,
+      "drawCalls": 215,
+      "triangles": 323650,
+      "headlights": [
+        4.622097964126797,
+        4.622097964126797
+      ],
+      "trafficCars": [],
+      "position": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "renderPosition": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "cameraPosition": [
+        -1158.669341159768,
+        -1.2794070884094864,
+        -194.1833320112916
+      ],
+      "cockpitVisible": false,
+      "steeringWheelAngle": 0,
+      "instrumentSpeed": 0,
+      "muted": false,
+      "audioStatus": "Sound enabled",
+      "audioNodes": 16,
+      "quality": "Medium",
+      "reduced": false
+    }
+  ],
+  "errors": []
+}

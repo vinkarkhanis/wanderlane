@@ -3,6 +3,19 @@ import { inside, nearest, meshHeight } from "./spatial.js";
 import { random, hashSeed } from "../random.js";
 import { vegetationResources, addGroundDetail } from "../vegetation.js";
 import { detailCandidates, tileDetails } from "./cityDetails.js";
+import { CitySignalView } from "./citySignalView.js";
+import { CityActors } from "./cityActors.js";
+import { STREET_SCENES } from "./puneStreetDetails.js";
+import { buildingStyle, markingRanges } from "./puneStyle.js";
+import { buildingMaterials, dressBuilding } from "./puneBuildings.js";
+import { edgeCandidates, tileEdges, junctionNodes } from "./puneEdges.js";
+import { renderEdge } from "./puneEdgeView.js";
+import {
+  benchmarkPlan,
+  benchmarkBays,
+  renderBenchmark,
+} from "./puneBenchmark.js";
+import { benchmarkMaterials } from "./puneSurfaceMaterials.js";
 export const SEASONS = ["Summer", "Monsoon", "Winter"];
 const colors = {
   Summer: [0x9b9566, 0xa5ae74, 0x414548],
@@ -10,6 +23,8 @@ const colors = {
   Winter: [0x969a79, 0xa6b182, 0x42494b],
 };
 function merge(parts) {
+  const hasColors = parts.some((g) => g.attributes.color),
+    colors = [];
   const pos = [],
     norm = [],
     uv = [];
@@ -17,6 +32,13 @@ function merge(parts) {
     const g = source.index ? source.toNonIndexed() : source;
     for (const v of g.attributes.position.array) pos.push(v);
     for (const v of g.attributes.normal.array) norm.push(v);
+    if (hasColors) {
+      if (g.attributes.color)
+        for (const v of g.attributes.color.array) colors.push(v);
+      else
+        for (let i = 0; i < g.attributes.position.count * 3; i++)
+          colors.push(1);
+    }
     for (const v of g.attributes.uv?.array ||
       new Float32Array(g.attributes.position.count * 2))
       uv.push(v);
@@ -27,6 +49,8 @@ function merge(parts) {
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute("normal", new THREE.Float32BufferAttribute(norm, 3));
   g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  if (hasColors)
+    g.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
   g.computeBoundingSphere();
   return g;
 }
@@ -100,6 +124,11 @@ export class CityWorld {
     this.controller = new AbortController();
     this.lastCell = "";
     this.detailPlan = detailCandidates(path);
+    this.edgePlan = edgeCandidates(path, this.detailPlan);
+    this.benchmarkPlan = benchmarkPlan(path);
+    this.junctionNodes = junctionNodes(path);
+    this.signalView = new CitySignalView(path);
+    this.actors = new CityActors(path, quality);
     this.resources();
   }
   resources() {
@@ -118,59 +147,49 @@ export class CityWorld {
       park: mat(0x6f8751),
       roof: mat(0x8b8b7a),
       trim: mat(0x7a817b),
+      rubber: mat(0x242c29),
+      autoPaint: mat(0xc59c32),
       fixture: mat(0xe8dec1, { emissive: 0xffd49a, emissiveIntensity: 0.15 }),
       box: new THREE.BoxGeometry(1, 1, 1),
     };
     addGroundDetail(this.res.terrain);
+    addGroundDetail(this.res.asphalt);
+    addGroundDetail(this.res.shoulder);
     Object.assign(this.res, vegetationResources("meadow", this.wind));
-    // A single original facade atlas repeats in metres across all building walls.
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 256;
-    const c = canvas.getContext("2d");
-    c.fillStyle = "#c5c0ad";
-    c.fillRect(0, 0, 256, 256);
-    for (let row = 0; row < 4; row++)
-      for (let col = 0; col < 4; col++) {
-        const x = col * 64 + 17,
-          y = row * 64 + 13;
-        c.fillStyle = "#a09b8d";
-        c.fillRect(x - 3, y - 3, 36, 41);
-        c.fillStyle = "#4d656b";
-        c.fillRect(x, y, 29, 32);
-        c.fillStyle = "#8a9b99";
-        c.fillRect(x + 2, y + 2, 12, 13);
-        c.fillStyle = "#d8d2bc";
-        c.fillRect(x - 3, y + 33, 36, 3);
-      }
-    this.res.facadeTexture = new THREE.CanvasTexture(canvas);
-    this.res.facadeTexture.colorSpace = THREE.SRGBColorSpace;
-    this.res.facadeTexture.wrapS = this.res.facadeTexture.wrapT =
-      THREE.RepeatWrapping;
-    const nightCanvas = document.createElement("canvas");
-    nightCanvas.width = nightCanvas.height = 256;
-    const n = nightCanvas.getContext("2d");
-    n.fillStyle = "#000";
-    n.fillRect(0, 0, 256, 256);
-    for (const [x, y] of [
-      [17, 13],
-      [145, 77],
-      [81, 205],
-    ]) {
-      n.fillStyle = "#baa46b";
-      n.fillRect(x, y, 29, 32);
+    const surfaces = benchmarkMaterials();
+    Object.assign(this.res, surfaces.materials);
+    this.surfaceTextures = surfaces.textures;
+    for (const key of ["cream", "ochre"]) {
+      this.actors.res[key].map = this.res.concrete.map;
+      this.actors.res[key].bumpMap = this.res.concrete.bumpMap;
+      this.actors.res[key].bumpScale = 0.012;
     }
-    this.res.windowTexture = new THREE.CanvasTexture(nightCanvas);
-    this.res.windowTexture.colorSpace = THREE.SRGBColorSpace;
-    this.res.windowTexture.wrapS = this.res.windowTexture.wrapT =
-      THREE.RepeatWrapping;
-    this.facades = [0xd3c9b3, 0xb7bbb3, 0xc3ad93, 0xa9b7b8].map((color) =>
-      mat(color, {
-        map: this.res.facadeTexture,
-        emissiveMap: this.res.windowTexture,
-        emissive: 0xffd49a,
-        emissiveIntensity: 0,
-      }),
-    );
+    this.res.benchmarkFacade = mat(0xffffff, { vertexColors: true });
+    this.benchmarkReady = new Promise((resolve) => {
+      const texture = new THREE.TextureLoader().load(
+        new URL("../../assets/art/pune-residential-facade.png", import.meta.url)
+          .href,
+        () => resolve(),
+        undefined,
+        () => resolve(),
+      );
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.anisotropy = 4;
+      this.res.benchmarkFacade.map = texture;
+      this.surfaceTextures.push(texture);
+    });
+    const styles = buildingMaterials();
+    this.facades = styles.materials;
+    this.facadeTextures = styles.textures;
+    this.res.solar = mat(0x36575b, { roughness: 0.55 });
+    this.res.patch = mat(0x353c3d);
+    this.res.puddle = mat(0x526365, {
+      roughness: 0.12,
+      metalness: 0.45,
+      transparent: true,
+      opacity: 0,
+    });
     this.setSeason(this.season);
   }
   setSeason(season) {
@@ -182,6 +201,7 @@ export class CityWorld {
     this.res.grass.color.setHex(p[0]);
     this.res.asphalt.color.setHex(p[2]);
     this.res.asphalt.roughness = season === "Monsoon" ? 0.34 : 0.94;
+    this.res.puddle.opacity = season === "Monsoon" ? 0.65 : 0;
   }
   async fetchChunk(entry) {
     if (
@@ -220,14 +240,29 @@ export class CityWorld {
     return task;
   }
   async ready(v) {
+    await this.benchmarkReady;
     this.update(v, 0, true);
     await Promise.all(this.pending.values());
-    while (this.queue.length) this.activate(this.queue.shift());
+    while (this.queue.length) {
+      const data = this.queue.shift();
+      if (this.wanted.has(data.id) && !this.chunks.has(data.id))
+        this.activate(data);
+    }
     if (this.error) throw Error(this.error);
   }
   update(v, time = 0, reduced = false, night = 0, sunset = false) {
+    this.signalView.update(this.signals?.time ?? time);
+    this.actors.update(
+      v,
+      this.experience?.status === "active" ? this.experience.elapsed : time,
+      reduced,
+      Math.max(night, sunset ? 0.35 : 0),
+      this.season,
+      this.experience,
+    );
     this.wind.value = reduced ? 0 : time;
-    for (const m of this.facades) m.emissiveIntensity = night * 0.5;
+    for (const [i, m] of this.facades.entries())
+      m.emissiveIntensity = night * (i === 5 ? 0 : 0.25 + i * 0.06);
     this.res.fixture.emissiveIntensity =
       0.15 + Math.max(night, sunset ? 0.25 : 0) * 3;
     const cx = Math.floor(v.x / 256),
@@ -261,6 +296,7 @@ export class CityWorld {
         Math.hypot(c.data.x + 128 - v.x, c.data.z + 128 - v.z) < 330;
       c.group.traverse((o) => {
         if (o.userData.tree) o.castShadow = close && this.quality !== "Low";
+        if (o.userData.building) o.castShadow = close && this.quality !== "Low";
       });
     }
   }
@@ -342,6 +378,28 @@ export class CityWorld {
         len = Math.hypot(dx, dz),
         nx = -dz / len,
         nz = dx / len;
+      // Cosmetic repairs, owned once at the segment midpoint. They never alter
+      // contact height, lane geometry or source-backed road alignment.
+      const mx = (r.p[0] + r.q[0]) / 2,
+        mz = (r.p[1] + r.q[1]) / 2;
+      if (
+        !r.elevated &&
+        len > 45 &&
+        r.id % 5 === 0 &&
+        Math.floor(mx / 256) === data.x / 256 &&
+        Math.floor(mz / 256) === data.z / 256
+      ) {
+        block(
+          mx,
+          (r.y0 + r.y1) / 2 + 0.097,
+          mz,
+          Math.min(1.6, r.width / 3),
+          0.018,
+          2.5,
+          Math.atan2(dx, dz),
+          this.res.patch,
+        );
+      }
       if (r.elevated) {
         const bridge = r.tags.bridge && r.tags.bridge !== "no";
         if (bridge) {
@@ -437,11 +495,8 @@ export class CityWorld {
           g.translate(p[0], y + 0.074, p[1]);
           add(g, this.res.asphalt);
         }
-      if (r.width >= 6 && !r.oneway) {
-        const steps = Math.floor(r.length / 10);
-        for (let i = 0; i < steps; i++) {
-          const a = (i * 10 + 2) / r.length,
-            b = Math.min(1, (i * 10 + 6) / r.length);
+      {
+        for (const [a, b] of markingRanges(r, this.junctionNodes)) {
           add(
             roadRibbon(
               {
@@ -465,7 +520,29 @@ export class CityWorld {
         }
       }
     }
+    const bays = benchmarkBays(data, this.path, this.benchmarkPlan);
+    renderBenchmark(
+      bays,
+      data,
+      this.path,
+      block,
+      this.res,
+      (x, z) => this.terrainHeight(data, x, z) - 0.22,
+    );
+    const styles = {},
+      edges = tileEdges(data, this.edgePlan, this.quality);
+    let rooftopFittings = 0;
     for (const b of data.buildings) {
+      const style = buildingStyle(b);
+      styles[style.family] = (styles[style.family] || 0) + 1;
+      rooftopFittings += dressBuilding(
+        b,
+        this.quality,
+        block,
+        this.res,
+        this.path,
+        data,
+      );
       const g = new THREE.ExtrudeGeometry(shape(b), {
         depth: b.height,
         bevelEnabled: false,
@@ -484,7 +561,27 @@ export class CityWorld {
           wall ? p.getY(i) / 12 : p.getZ(i) / 12,
         );
       }
-      add(g, this.facades[b.variant]);
+      const benchmark = this.benchmarkPlan.some(
+        (p) =>
+          Math.hypot(
+            p.x - (b.bounds[0] + b.bounds[2]) / 2,
+            p.z - (b.bounds[1] + b.bounds[3]) / 2,
+          ) < 65,
+      );
+      if (benchmark && this.res.benchmarkFacade.map.image) {
+        const tint = new THREE.Color(
+          [0xf5ead9, 0xe0e5df, 0xe6ded3, 0xd6dbda][style.seed % 4],
+        );
+        const colors = new Float32Array(p.count * 3);
+        for (let i = 0; i < p.count; i++) tint.toArray(colors, i * 3);
+        g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      }
+      add(
+        g,
+        benchmark && this.res.benchmarkFacade.map.image
+          ? this.res.benchmarkFacade
+          : this.facades[style.index],
+      );
       add(surface(b, b.y + b.height + 0.025), this.res.roof);
     }
     for (const l of data.land) {
@@ -512,6 +609,26 @@ export class CityWorld {
         });
         add(g, this.res.park);
       }
+    }
+    for (const p of edges) {
+      renderEdge(
+        p,
+        this.terrainHeight(data, p.x, p.z) - 0.22,
+        block,
+        this.res,
+        add,
+      );
+      if (p.kind === "drain")
+        block(
+          p.x + 0.8,
+          this.terrainHeight(data, p.x + 0.8, p.z) + 0.015,
+          p.z,
+          0.5,
+          0.025,
+          2,
+          p.yaw,
+          this.res.puddle,
+        );
     }
     const rng = random(hashSeed(data.id)),
       trees = [[], [], []],
@@ -577,6 +694,11 @@ export class CityWorld {
       }
     }
     const safe = (x, z) => {
+      if (bays.some((p) => Math.hypot(p.x - x, p.z - z) < 7)) return false;
+      if (STREET_SCENES.some((p) => Math.hypot(p.x - x, p.z - z) < 10))
+        return false;
+      if (edges.some((p) => Math.hypot(p.x - x, p.z - z) < p.radius + 4))
+        return false;
       if (details.some((p) => Math.hypot(p.x - x, p.z - z) < p.radius + 4))
         return false;
       const near = this.path.findNearestRoadPoint(x, z, {});
@@ -648,19 +770,46 @@ export class CityWorld {
       instance(this.res[k + "Leaves"], this.res.leaf, trees[i], true);
     }
     instance(this.res.grassBlades, this.res.grass, grass);
+    const releaseActors = this.actors.addChunk(
+      data,
+      group,
+      block,
+      (x, z) => this.terrainHeight(data, x, z) - 0.22,
+      owned,
+      add,
+    );
     for (const [m, gs] of parts) {
       const g = merge(gs);
       geometries.push(g);
       const mesh = new THREE.Mesh(g, m);
       mesh.receiveShadow = true;
+      mesh.userData.building =
+        this.facades.includes(m) ||
+        m === this.res.benchmarkFacade ||
+        m === this.res.concrete ||
+        [
+          this.actors.res.cream,
+          this.actors.res.ochre,
+          this.actors.res.teal,
+        ].includes(m);
       group.add(mesh);
     }
     this.scene.add(group);
+    const releaseSignals = this.signalView.addChunk(
+      data,
+      group,
+      (x, z) => this.terrainHeight(data, x, z) - 0.22,
+    );
     this.chunks.set(data.id, {
+      releaseSignals,
+      releaseActors,
       group,
       geometries,
       owned,
       groundSurfaces,
+      styles,
+      rooftopFittings,
+      edges,
       details,
       data,
       trees: trees.reduce((n, t) => n + t.length, 0),
@@ -703,6 +852,8 @@ export class CityWorld {
   remove(id) {
     const c = this.chunks.get(id);
     c.group.removeFromParent();
+    c.releaseSignals();
+    c.releaseActors();
     for (const g of c.geometries) g.dispose();
     for (const resource of c.owned) resource.dispose();
     c.group.traverse((o) => {
@@ -713,17 +864,39 @@ export class CityWorld {
   dispose() {
     this.disposed = true;
     this.controller.abort();
+    this.signalView.dispose();
+    this.actors.dispose();
     for (const id of [...this.chunks.keys()]) this.remove(id);
     for (const v of Object.values(this.res)) v?.dispose?.();
     for (const m of this.facades) m.dispose();
+    for (const t of this.facadeTextures) t.dispose();
+    for (const t of this.surfaceTextures) t.dispose();
     this.queue.length = 0;
   }
   get stats() {
+    const buildingStyles = {};
+    let streetProps = 0,
+      parkedVehicles = 0,
+      rooftopFittings = 0;
     let buildings = 0,
       vegetation = 0,
       details = 0,
       signs = 0;
     for (const c of this.chunks.values()) {
+      for (const [k, n] of Object.entries(c.styles))
+        buildingStyles[k] = (buildingStyles[k] || 0) + n;
+      streetProps += c.edges.length;
+      parkedVehicles += c.edges.reduce(
+        (n, p) =>
+          n +
+          (p.kind === "scooter"
+            ? 2
+            : ["car", "rickshaw"].includes(p.kind)
+              ? 1
+              : 0),
+        0,
+      );
+      rooftopFittings += c.rooftopFittings;
       buildings += c.data.buildings.length;
       vegetation += c.trees;
       details += c.details.length;
@@ -731,12 +904,22 @@ export class CityWorld {
     }
     return {
       buildings,
+      buildingStyles,
+      streetProps,
+      parkedVehicles,
+      rooftopFittings,
+      elevation: this.manifest.elevation.label,
       vegetation,
       details,
       signs,
       pending: this.pending.size,
       queued: this.queue.length,
       error: this.error,
+      signals: this.signals?.snapshot ?? {
+        active: this.signalView.plan.length,
+      },
+      actors: this.actors.snapshot,
+      signalHeads: this.signalView.heads.size,
     };
   }
 }

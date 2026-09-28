@@ -39,6 +39,7 @@ for (const file of [
   await copy(file);
 await folder("src");
 await folder("vendor");
+await folder("assets/art");
 for (const f of [
   "data-sources/README.md",
   "data-sources/pune/source-metadata.json",
