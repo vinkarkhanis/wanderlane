@@ -70,3 +70,5 @@ The `wanderlane` Worker is a static-assets deployment. `wrangler.jsonc` explicit
 Dashboard deploy command: `npx wrangler deploy`. The dashboard build command may remain empty because Wrangler runs the configured build. Production must use the branch containing this configuration and the desired game changes (currently `feature/real-pune` until PR #1 is merged).
 
 A build with no Wrangler configuration can infer the repository root as the assets directory and accidentally include node_modules. The observed failed build tried to upload the 128 MiB workerd binary. Do not fix this by increasing limits or deleting dependencies: select the prepared dist assets instead.
+
+Cloudflare production settings were updated on 2026-09-28: branch `feature/real-pune`, root `/`, build command `npm run build:site`, deploy command `npx wrangler deploy`. Retry of an older main-branch build retains its original source branch; use a new branch push for this release.
