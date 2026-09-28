@@ -26,6 +26,7 @@
     "validate:pune": "node tools/validate-pune.mjs",
     "test:pune": "node --test tests/pune.test.mjs",
     "build": "node tools/build.mjs",
+    "build:site": "node tools/build.mjs --no-zip",
     "test:pune:browser": "node tests/pune-browser.mjs",
     "test:pune:world": "node tests/pune-world.mjs",
     "test:pune:deployment": "node tests/pune-deployment.mjs"

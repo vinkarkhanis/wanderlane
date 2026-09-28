@@ -50,12 +50,23 @@ Current terrain is explicitly synthetic; no actual Pune DEM has been bundled.
 
 ## Pilot limitations
 
-This first playable pilot is not a fully accepted city release. Junction lane
-connectors and collision behavior need further road-by-road review. Signal nodes
-are imported but signal-controlled traffic is not implemented. Traffic follows
-only the curated route, in the forward direction; no city-wide traffic routing or
-oncoming vehicles yet. Bridge grades are approximations, tunnels are not present
-in this snapshot, and complex interchanges need manual review. Distant skyline
-LOD, authored Pune tree species, street furniture and detailed building variants
-remain next-stage work. OSM coverage and inferred footprints/heights are uneven.
-No 60 FPS guarantee or complete manual traversal is claimed.
+This is an early playable city pilot. Imported signals now drive deterministic traffic queues along the curated route; city-wide routing and oncoming traffic remain unimplemented. Terrain elevation is synthetic, bridge grades are approximations, and decorative shops are fictional. The neighbourhood benchmark is bounded rather than a complete Pune reconstruction. People, vegetation and distant buildings remain stylized. No universal 60 FPS or physical-phone production validation is claimed. See docs/real-pune-validation.md for tested scope.
+
+## First public release
+
+The current candidate is commit 18974a7 on feature/real-pune (PR #1). Do not deploy main expecting these changes unless the PR has been merged. A direct upload of the checked local ZIP can deploy this candidate without merging. For Git integration, select the intended release branch explicitly.
+
+For Cloudflare Pages Direct Upload, upload dist/ or wanderlane-pune.zip. For itch.io, create an HTML game, upload the ZIP, mark it playable in-browser and use click-to-launch fullscreen. The same ZIP contains all assets and geographic attribution. Draft store copy is in docs/itch-listing.md. Bundle dimensions and SHA-256 are in docs/release-preflight.json.
+
+After upload, verify Begin, a discovery drive, manual steering/braking, traffic, sound after interaction, settings/pause, camera controls, texture loading and visible OSM attribution at the live URL. Test touch on a real phone before claiming physical-device support. No paid promotion budget has been authorized.
+
+Official guides: https://developers.cloudflare.com/pages/get-started/direct-upload/ and https://itch.io/docs/creators/html5
+
+
+## Cloudflare Workers Git builds
+
+The `wanderlane` Worker is a static-assets deployment. `wrangler.jsonc` explicitly selects `./dist` and runs `npm run build:site` before upload. The site-only build does not need Python; `npm run build` still makes the itch.io ZIP locally.
+
+Dashboard deploy command: `npx wrangler deploy`. The dashboard build command may remain empty because Wrangler runs the configured build. Production must use the branch containing this configuration and the desired game changes (currently `feature/real-pune` until PR #1 is merged).
+
+A build with no Wrangler configuration can infer the repository root as the assets directory and accidentally include node_modules. The observed failed build tried to upload the 128 MiB workerd binary. Do not fix this by increasing limits or deleting dependencies: select the prepared dist assets instead.

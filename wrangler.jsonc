@@ -1,0 +1,10 @@
+{
+  "name": "wanderlane",
+  "compatibility_date": "2026-09-26",
+  "build": {
+    "command": "npm run build:site",
+  },
+  "assets": {
+    "directory": "./dist",
+  },
+}

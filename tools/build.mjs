@@ -66,9 +66,12 @@ for (const f of files)
   if ((await stat(join(root, f))).size >= 25 * 1024 * 1024)
     throw Error("File exceeds hosting limit: " + f);
 await writeFile("dist-files.json", JSON.stringify(files));
-execFileSync("python", ["tools/package-site.py"], { stdio: "inherit" });
+const packageZip = !process.argv.includes("--no-zip");
+if (packageZip)
+  execFileSync("python", ["tools/package-site.py"], { stdio: "inherit" });
 console.log(
-  "Static site: dist/; itch.io upload: wanderlane-pune.zip; " +
+  "Static site: dist/; " +
+    (packageZip ? "itch.io upload: wanderlane-pune.zip; " : "") +
     files.length +
     " files.",
 );
