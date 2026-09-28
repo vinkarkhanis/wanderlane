@@ -161,6 +161,17 @@ try {
       p.render();
       counts.push({ ...p.renderer.info.memory, chunks: p.world.chunks.size });
     }
+    // A completed fetch can still be queued when a route restart changes the
+    // wanted tiles. ready() must not resurrect that stale tile or duplicate it.
+    const stale = p.world.manifest.chunks.find(
+      (c) => !p.world.wanted.has(c.id),
+    );
+    p.world.queue.push(
+      await (await fetch(new URL(stale.file, p.world.base))).json(),
+    );
+    await p.world.ready(p.vehicle);
+    if (p.world.chunks.has(stale.id))
+      throw Error("Restart activated a stale queued tile");
     p.world.dispose();
     p.car.dispose();
     p.renderer.render(p.scene, p.cam);

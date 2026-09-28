@@ -1,5 +1,6 @@
 import { buildConnectors, sampleConnector } from "./laneConnectors.js";
 import { Grid, nearest } from "./spatial.js";
+import { clearImpact } from "../vehicleCollisions.js";
 const mod = (s, n) => ((s % n) + n) % n;
 export class CityPath {
   constructor(nav, manifest) {
@@ -284,6 +285,7 @@ export class CityPath {
     v.heading += delta * (1 - Math.exp(-2 * dt));
   }
   resetNearest(v) {
+    clearImpact(v);
     const n = this.findNearestRoadPoint(v.x, v.z, {}, v.y),
       r = this.roads[n.roadId];
     if (r.oneway === -1) {

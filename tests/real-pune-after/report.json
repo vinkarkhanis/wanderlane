@@ -1,0 +1,697 @@
+{
+  "reports": [
+    {
+      "seed": "aster-2026",
+      "frameMs": 13.625311005157188,
+      "driveMode": "pune",
+      "season": "Summer",
+      "city": {
+        "buildings": 319,
+        "buildingStyles": {
+          "plaster": 55,
+          "society": 43,
+          "bungalow": 106,
+          "shops": 26,
+          "construction": 22,
+          "office": 28,
+          "modern": 39
+        },
+        "streetProps": 16,
+        "parkedVehicles": 11,
+        "rooftopFittings": 347,
+        "elevation": "Synthetic terrain — not surveyed Pune elevation",
+        "vegetation": 657,
+        "details": 184,
+        "signs": 12,
+        "pending": 0,
+        "queued": 0,
+        "error": null,
+        "signals": {
+          "active": 3,
+          "red": 0,
+          "amber": 0,
+          "green": 3,
+          "time": 3.516666666666659,
+          "lights": [
+            {
+              "id": 247431934,
+              "s": 2047.1200000000008,
+              "node": [
+                698.73,
+                -332.14
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 2835.539999999999,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 7018.550000000001,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            }
+          ]
+        },
+        "actors": {
+          "pedestrians": 3,
+          "stalls": 1,
+          "busStops": 0,
+          "scenes": [
+            "evening-chai-crowd"
+          ],
+          "landmarks": [
+            "baner-chai-canopy"
+          ]
+        },
+        "signalHeads": 0,
+        "trafficTypes": {
+          "car": 0,
+          "rickshaw": 0,
+          "scooter": 0,
+          "bus": 0
+        }
+      },
+      "journal": {
+        "drives": [],
+        "scenes": [
+          {
+            "id": "evening-chai-crowd",
+            "label": "Sandhya Chai · संध्या चहा",
+            "provenance": "Fictional local-style scene"
+          }
+        ],
+        "postcards": []
+      },
+      "experience": {
+        "available": true,
+        "tripId": "evening-chai-run",
+        "name": "Evening Chai Run",
+        "description": "A relaxed sunset drive from the Baner High Street area toward Pashan Lake.",
+        "status": "active",
+        "objectiveIndex": 0,
+        "objectiveLabel": "Leave Baner · Pancard Club Road",
+        "nextDistance": 1480.750000000009,
+        "remaining": 5975.750000000009,
+        "distance": 5975.750000000009,
+        "progress": 0,
+        "elapsed": 3.516666666666659,
+        "quality": "Smooth",
+        "reason": "Gentle braking and a steady line. Time well spent.",
+        "hardBrakes": 0,
+        "hardAccelerations": 0,
+        "offRoadTime": 0,
+        "routeDepartures": 0,
+        "redLightViolations": 0,
+        "eventsSeen": [
+          "evening-chai-crowd"
+        ],
+        "road": "the local road",
+        "marathi": "",
+        "district": "Baner"
+      },
+      "biome": "meadow",
+      "time": "Day",
+      "auto": false,
+      "paused": false,
+      "camera": 0,
+      "traffic": 0,
+      "collisions": {
+        "count": 0,
+        "last": null
+      },
+      "impact": {
+        "lateralSpeed": 0,
+        "yawRate": 0
+      },
+      "speed": 0,
+      "heading": 2.290980235748249,
+      "distance": 0,
+      "roadDistance": 9690,
+      "offset": -0.05059400941338163,
+      "surface": "Asphalt",
+      "chunks": 25,
+      "geometries": 183,
+      "textures": 24,
+      "drawCalls": 241,
+      "triangles": 360402,
+      "headlights": [
+        0.764234789400266,
+        0.764234789400266
+      ],
+      "trafficCars": [],
+      "position": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "renderPosition": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "cameraPosition": [
+        -1158.669341159768,
+        -1.2794070883592625,
+        -194.1833320112916
+      ],
+      "cockpitVisible": false,
+      "steeringWheelAngle": 0,
+      "instrumentSpeed": 0,
+      "muted": false,
+      "audioStatus": "Sound enabled",
+      "audioNodes": 16,
+      "quality": "Medium",
+      "reduced": false
+    },
+    {
+      "seed": "aster-2026",
+      "frameMs": 25.28540805466476,
+      "driveMode": "pune",
+      "season": "Summer",
+      "city": {
+        "buildings": 319,
+        "buildingStyles": {
+          "plaster": 55,
+          "society": 43,
+          "bungalow": 106,
+          "shops": 26,
+          "construction": 22,
+          "office": 28,
+          "modern": 39
+        },
+        "streetProps": 16,
+        "parkedVehicles": 11,
+        "rooftopFittings": 347,
+        "elevation": "Synthetic terrain — not surveyed Pune elevation",
+        "vegetation": 657,
+        "details": 184,
+        "signs": 12,
+        "pending": 0,
+        "queued": 0,
+        "error": null,
+        "signals": {
+          "active": 3,
+          "red": 0,
+          "amber": 0,
+          "green": 3,
+          "time": 6.883333333333314,
+          "lights": [
+            {
+              "id": 247431934,
+              "s": 2047.1200000000008,
+              "node": [
+                698.73,
+                -332.14
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 2835.539999999999,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 7018.550000000001,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            }
+          ]
+        },
+        "actors": {
+          "pedestrians": 3,
+          "stalls": 1,
+          "busStops": 0,
+          "scenes": [
+            "evening-chai-crowd"
+          ],
+          "landmarks": [
+            "baner-chai-canopy"
+          ]
+        },
+        "signalHeads": 0,
+        "trafficTypes": {
+          "car": 0,
+          "rickshaw": 0,
+          "scooter": 0,
+          "bus": 0
+        }
+      },
+      "journal": {
+        "drives": [],
+        "scenes": [
+          {
+            "id": "evening-chai-crowd",
+            "label": "Sandhya Chai · संध्या चहा",
+            "provenance": "Fictional local-style scene"
+          }
+        ],
+        "postcards": []
+      },
+      "experience": {
+        "available": true,
+        "tripId": "evening-chai-run",
+        "name": "Evening Chai Run",
+        "description": "A relaxed sunset drive from the Baner High Street area toward Pashan Lake.",
+        "status": "active",
+        "objectiveIndex": 0,
+        "objectiveLabel": "Leave Baner · Pancard Club Road",
+        "nextDistance": 1480.750000000009,
+        "remaining": 5975.750000000009,
+        "distance": 5975.750000000009,
+        "progress": 0,
+        "elapsed": 6.883333333333314,
+        "quality": "Smooth",
+        "reason": "Gentle braking and a steady line. Time well spent.",
+        "hardBrakes": 0,
+        "hardAccelerations": 0,
+        "offRoadTime": 0,
+        "routeDepartures": 0,
+        "redLightViolations": 0,
+        "eventsSeen": [
+          "evening-chai-crowd"
+        ],
+        "road": "the local road",
+        "marathi": "",
+        "district": "Baner"
+      },
+      "biome": "meadow",
+      "time": "Sunset",
+      "auto": false,
+      "paused": false,
+      "camera": 0,
+      "traffic": 0,
+      "collisions": {
+        "count": 0,
+        "last": null
+      },
+      "impact": {
+        "lateralSpeed": 0,
+        "yawRate": 0
+      },
+      "speed": 0,
+      "heading": 2.290980235748249,
+      "distance": 0,
+      "roadDistance": 9690,
+      "offset": -0.05059400941338163,
+      "surface": "Asphalt",
+      "chunks": 25,
+      "geometries": 183,
+      "textures": 24,
+      "drawCalls": 241,
+      "triangles": 360402,
+      "headlights": [
+        0.008560212870757372,
+        0.008560212870757372
+      ],
+      "trafficCars": [],
+      "position": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "renderPosition": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "cameraPosition": [
+        -1158.669341159768,
+        -1.2794070884094872,
+        -194.1833320112916
+      ],
+      "cockpitVisible": false,
+      "steeringWheelAngle": 0,
+      "instrumentSpeed": 0,
+      "muted": false,
+      "audioStatus": "Sound enabled",
+      "audioNodes": 16,
+      "quality": "Medium",
+      "reduced": false
+    },
+    {
+      "seed": "aster-2026",
+      "frameMs": 24.771380511103366,
+      "driveMode": "pune",
+      "season": "Summer",
+      "city": {
+        "buildings": 319,
+        "buildingStyles": {
+          "plaster": 55,
+          "society": 43,
+          "bungalow": 106,
+          "shops": 26,
+          "construction": 22,
+          "office": 28,
+          "modern": 39
+        },
+        "streetProps": 16,
+        "parkedVehicles": 11,
+        "rooftopFittings": 347,
+        "elevation": "Synthetic terrain — not surveyed Pune elevation",
+        "vegetation": 657,
+        "details": 184,
+        "signs": 12,
+        "pending": 0,
+        "queued": 0,
+        "error": null,
+        "signals": {
+          "active": 3,
+          "red": 0,
+          "amber": 1,
+          "green": 2,
+          "time": 10.116666666666749,
+          "lights": [
+            {
+              "id": 247431934,
+              "s": 2047.1200000000008,
+              "node": [
+                698.73,
+                -332.14
+              ],
+              "phase": "amber"
+            },
+            {
+              "id": 2476292433,
+              "s": 2835.539999999999,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 7018.550000000001,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            }
+          ]
+        },
+        "actors": {
+          "pedestrians": 3,
+          "stalls": 1,
+          "busStops": 0,
+          "scenes": [
+            "evening-chai-crowd"
+          ],
+          "landmarks": [
+            "baner-chai-canopy"
+          ]
+        },
+        "signalHeads": 0,
+        "trafficTypes": {
+          "car": 0,
+          "rickshaw": 0,
+          "scooter": 0,
+          "bus": 0
+        }
+      },
+      "journal": {
+        "drives": [],
+        "scenes": [
+          {
+            "id": "evening-chai-crowd",
+            "label": "Sandhya Chai · संध्या चहा",
+            "provenance": "Fictional local-style scene"
+          }
+        ],
+        "postcards": []
+      },
+      "experience": {
+        "available": true,
+        "tripId": "evening-chai-run",
+        "name": "Evening Chai Run",
+        "description": "A relaxed sunset drive from the Baner High Street area toward Pashan Lake.",
+        "status": "active",
+        "objectiveIndex": 0,
+        "objectiveLabel": "Leave Baner · Pancard Club Road",
+        "nextDistance": 1480.750000000009,
+        "remaining": 5975.750000000009,
+        "distance": 5975.750000000009,
+        "progress": 0,
+        "elapsed": 10.116666666666749,
+        "quality": "Smooth",
+        "reason": "Gentle braking and a steady line. Time well spent.",
+        "hardBrakes": 0,
+        "hardAccelerations": 0,
+        "offRoadTime": 0,
+        "routeDepartures": 0,
+        "redLightViolations": 0,
+        "eventsSeen": [
+          "evening-chai-crowd"
+        ],
+        "road": "the local road",
+        "marathi": "",
+        "district": "Baner"
+      },
+      "biome": "meadow",
+      "time": "Night",
+      "auto": false,
+      "paused": false,
+      "camera": 0,
+      "traffic": 0,
+      "collisions": {
+        "count": 0,
+        "last": null
+      },
+      "impact": {
+        "lateralSpeed": 0,
+        "yawRate": 0
+      },
+      "speed": 0,
+      "heading": 2.290980235748249,
+      "distance": 0,
+      "roadDistance": 9690,
+      "offset": -0.05059400941338163,
+      "surface": "Asphalt",
+      "chunks": 25,
+      "geometries": 184,
+      "textures": 24,
+      "drawCalls": 238,
+      "triangles": 359682,
+      "headlights": [
+        176.97044919691547,
+        176.97044919691547
+      ],
+      "trafficCars": [],
+      "position": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "renderPosition": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "cameraPosition": [
+        -1158.669341159768,
+        -1.2794070884094881,
+        -194.1833320112916
+      ],
+      "cockpitVisible": false,
+      "steeringWheelAngle": 0,
+      "instrumentSpeed": 0,
+      "muted": false,
+      "audioStatus": "Sound enabled",
+      "audioNodes": 16,
+      "quality": "Medium",
+      "reduced": false
+    },
+    {
+      "seed": "aster-2026",
+      "frameMs": 20.911393165379252,
+      "driveMode": "pune",
+      "season": "Monsoon",
+      "city": {
+        "buildings": 319,
+        "buildingStyles": {
+          "plaster": 55,
+          "society": 43,
+          "bungalow": 106,
+          "shops": 26,
+          "construction": 22,
+          "office": 28,
+          "modern": 39
+        },
+        "streetProps": 16,
+        "parkedVehicles": 11,
+        "rooftopFittings": 347,
+        "elevation": "Synthetic terrain — not surveyed Pune elevation",
+        "vegetation": 657,
+        "details": 184,
+        "signs": 12,
+        "pending": 0,
+        "queued": 0,
+        "error": null,
+        "signals": {
+          "active": 3,
+          "red": 1,
+          "amber": 0,
+          "green": 2,
+          "time": 13.266666666666906,
+          "lights": [
+            {
+              "id": 247431934,
+              "s": 2047.1200000000008,
+              "node": [
+                698.73,
+                -332.14
+              ],
+              "phase": "red"
+            },
+            {
+              "id": 2476292433,
+              "s": 2835.539999999999,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            },
+            {
+              "id": 2476292433,
+              "s": 7018.550000000001,
+              "node": [
+                699.12,
+                -322.87
+              ],
+              "phase": "green"
+            }
+          ]
+        },
+        "actors": {
+          "pedestrians": 3,
+          "stalls": 1,
+          "busStops": 0,
+          "scenes": [
+            "evening-chai-crowd"
+          ],
+          "landmarks": [
+            "baner-chai-canopy"
+          ]
+        },
+        "signalHeads": 0,
+        "trafficTypes": {
+          "car": 0,
+          "rickshaw": 0,
+          "scooter": 0,
+          "bus": 0
+        }
+      },
+      "journal": {
+        "drives": [],
+        "scenes": [
+          {
+            "id": "evening-chai-crowd",
+            "label": "Sandhya Chai · संध्या चहा",
+            "provenance": "Fictional local-style scene"
+          }
+        ],
+        "postcards": []
+      },
+      "experience": {
+        "available": true,
+        "tripId": "evening-chai-run",
+        "name": "Evening Chai Run",
+        "description": "A relaxed sunset drive from the Baner High Street area toward Pashan Lake.",
+        "status": "active",
+        "objectiveIndex": 0,
+        "objectiveLabel": "Leave Baner · Pancard Club Road",
+        "nextDistance": 1480.750000000009,
+        "remaining": 5975.750000000009,
+        "distance": 5975.750000000009,
+        "progress": 0,
+        "elapsed": 13.266666666666906,
+        "quality": "Smooth",
+        "reason": "Gentle braking and a steady line. Time well spent.",
+        "hardBrakes": 0,
+        "hardAccelerations": 0,
+        "offRoadTime": 0,
+        "routeDepartures": 0,
+        "redLightViolations": 0,
+        "eventsSeen": [
+          "evening-chai-crowd"
+        ],
+        "road": "the local road",
+        "marathi": "",
+        "district": "Baner"
+      },
+      "biome": "meadow",
+      "time": "Day",
+      "auto": false,
+      "paused": false,
+      "camera": 0,
+      "traffic": 0,
+      "collisions": {
+        "count": 0,
+        "last": null
+      },
+      "impact": {
+        "lateralSpeed": 0,
+        "yawRate": 0
+      },
+      "speed": 0,
+      "heading": 2.290980235748249,
+      "distance": 0,
+      "roadDistance": 9690,
+      "offset": -0.05059400941338163,
+      "surface": "Asphalt",
+      "chunks": 25,
+      "geometries": 184,
+      "textures": 24,
+      "drawCalls": 241,
+      "triangles": 360402,
+      "headlights": [
+        3.554428041453607,
+        3.554428041453607
+      ],
+      "trafficCars": [],
+      "position": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "renderPosition": {
+        "x": -1152.5055286723696,
+        "y": -4.679407088409489,
+        "z": -199.59141999321204
+      },
+      "cameraPosition": [
+        -1158.669341159768,
+        -1.2794070884094881,
+        -194.1833320112916
+      ],
+      "cockpitVisible": false,
+      "steeringWheelAngle": 0,
+      "instrumentSpeed": 0,
+      "muted": false,
+      "audioStatus": "Sound enabled",
+      "audioNodes": 16,
+      "quality": "Medium",
+      "reduced": false
+    }
+  ],
+  "errors": []
+}

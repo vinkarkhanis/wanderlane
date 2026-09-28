@@ -1,20 +1,38 @@
 import { Traffic } from "../traffic.js";
 import { damp } from "../config.js";
+import { CityVehicle, FLEET, followingGap } from "./cityVehicles.js";
+import {
+  resetTrafficImpact,
+  advanceTrafficImpact,
+} from "../trafficCollisions.js";
 const delta = (a, b, l) => ((((a - b + l / 2) % l) + l) % l) - l / 2;
 // Pilot traffic follows the curated directed route only. No random junction turns.
 export class CityTraffic extends Traffic {
+  trafficCount(mode) {
+    return (
+      this.quality === "Low"
+        ? [0, 4, 8]
+        : this.quality === "High"
+          ? [0, 6, 14]
+          : [0, 5, 11]
+    )[mode];
+  }
+  createCar(i) {
+    return new CityVehicle(this.scene, FLEET[i % FLEET.length], i);
+  }
   setMode(mode, player) {
     super.setMode(mode, player);
     for (const c of this.cars) {
       c.direction = 1;
       c.lane = -1.6;
-      c.preferred = 7 + this.rng() * 2;
+      c.preferred = c.car.spec.speed;
       c.speed = Math.min(c.speed, c.preferred);
     }
     for (let i = 0; i < this.cars.length; i++)
       this.spawn(this.cars[i], player, i * 65);
   }
   spawn(c, player, extra = 0) {
+    resetTrafficImpact(c);
     c.direction = 1;
     c.lane = -1.6;
     const p = this.path.getLanePosition(player.near.distance, -1.6, {});
@@ -28,6 +46,7 @@ export class CityTraffic extends Traffic {
       this.path.getLanePosition(s, -1.6, sample);
       if (
         this.path.nearJunction(s) ||
+        (this.signals?.stopDistance(s, 8) ?? Infinity) < 70 ||
         Math.abs(this.path.getCurvatureAtDistance(s)) > 0.04 ||
         Math.hypot(sample.x - px, sample.z - pz) < 85
       )
@@ -53,24 +72,35 @@ export class CityTraffic extends Traffic {
     this.place(c, 0, 0);
   }
   safeSpeed(s, lane, speed) {
-    let target = 9;
+    let target = this.signals?.speedLimit(s) ?? 9;
     for (const c of this.cars) {
       if (c.waiting) continue;
       const gap = delta(c.s, s, this.path.length);
       if (gap > 0 && gap < 65)
-        target = Math.min(target, Math.max(0, (gap - 10) / 2));
+        target = Math.min(
+          target,
+          Math.max(0, (gap - c.car.bounds.halfLength - 5) / 2),
+        );
     }
     return target;
   }
   update(dt, player, night) {
+    if (dt > 0.02) {
+      const total = Math.min(dt, 0.1),
+        steps = Math.ceil(total * 60);
+      for (let i = 0; i < steps; i++) this.update(total / steps, player, night);
+      return;
+    }
     for (const c of this.cars) {
+      advanceTrafficImpact(c, dt);
       if (c.waiting) {
         c.retry -= dt;
         if (c.retry <= 0) this.spawn(c, player, this.cars.indexOf(c) * 43);
         continue;
       }
       let target = Math.min(
-        c.preferred,
+        c.impactHold ? 0 : c.preferred,
+        this.signals?.speedLimit(c.s, c.car.bounds.halfLength) ?? 9,
         Math.sqrt(
           1.4 /
             Math.max(
@@ -82,28 +112,52 @@ export class CityTraffic extends Traffic {
       for (const o of this.cars) {
         if (o === c || o.waiting) continue;
         const gap = delta(o.s, c.s, this.path.length);
-        if (gap > 0) target = Math.min(target, Math.max(0, (gap - 8) / 2));
+        if (gap > 0)
+          target = Math.min(
+            target,
+            Math.max(0, (gap - followingGap(c.car.bounds, o.car.bounds)) / 2),
+          );
       }
       const pg = delta(player.near.distance, c.s, this.path.length);
       if (pg > 0 && player.near.routeGap < 8)
         target = Math.min(target, Math.max(0, (pg - 10) / 2));
       const old = c.speed;
-      c.speed = damp(c.speed, target, target < old ? 4 : 0.7, dt);
+      c.speed = damp(
+        c.speed,
+        target,
+        target < old ? 4 : c.car.spec.acceleration,
+        dt,
+      );
       c.brake = c.speed < old - 0.002;
-      c.s += c.speed * dt;
+      let advance = Math.min(
+        c.speed * dt,
+        this.signals?.stopDistance(c.s, c.car.bounds.halfLength) ?? Infinity,
+      );
+      if (pg > 0 && player.near.routeGap < 8)
+        advance = Math.min(
+          advance,
+          Math.max(0, pg - c.car.bounds.halfLength - 4.3),
+        );
+      for (const o of this.cars) {
+        if (o === c || o.waiting) continue;
+        const gap = delta(o.s, c.s, this.path.length);
+        if (gap > 0)
+          advance = Math.min(
+            advance,
+            Math.max(
+              0,
+              gap - c.car.bounds.halfLength - o.car.bounds.halfLength - 2,
+            ),
+          );
+      }
+      c.s += advance;
+      if (advance < c.speed * dt) c.speed = advance / dt;
       if (Math.abs(delta(c.s, player.near.distance, this.path.length)) > 500)
         this.spawn(c, player, this.cars.indexOf(c) * 65);
       if (c.waiting) continue;
       this.place(c, dt, night);
-      const dx = player.x - c.sample.x,
-        dz = player.z - c.sample.z;
-      if (Math.hypot(dx, dz) < 4.5) {
-        player.speed *= Math.exp(-6 * dt);
-        const l = Math.hypot(dx, dz) || 1;
-        player.x += (dx / l) * 0.4 * dt;
-        player.z += (dz / l) * 0.4 * dt;
-      }
     }
+    this.resolveCollisions(dt, player, night);
   }
   clearNear(s) {
     for (let i = 0; i < this.cars.length; i++)

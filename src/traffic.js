@@ -1,6 +1,11 @@
 import { TrafficCar } from "./trafficCar.js";
 import { ROAD, damp } from "./config.js";
 import { random } from "./random.js";
+import {
+  TrafficCollisions,
+  resetTrafficImpact,
+  advanceTrafficImpact,
+} from "./trafficCollisions.js";
 export const TRAFFIC = ["Off", "Light", "Normal"];
 export class Traffic {
   constructor(scene, path) {
@@ -9,11 +14,12 @@ export class Traffic {
     this.cars = [];
     this.pool = [];
     this.mode = 0;
+    this.collisions = new TrafficCollisions();
     this.rng = random(path.hash ^ 91823);
   }
   setMode(mode, player) {
     this.mode = mode;
-    const count = [0, 3, 7][mode];
+    const count = this.trafficCount?.(mode) ?? [0, 3, 7][mode];
     while (this.cars.length > count) {
       const c = this.cars.pop();
       c.car.group.visible = false;
@@ -22,11 +28,7 @@ export class Traffic {
     while (this.cars.length < count) {
       const i = this.cars.length,
         c = this.pool.pop() || {
-          car: new TrafficCar(
-            this.scene,
-            [0xaaa38d, 0x6b8189, 0xa88063, 0x8a9188][i % 4],
-            i % 4,
-          ),
+          car: this.createCar(i),
           sample: {},
         };
       c.car.group.visible = false;
@@ -38,7 +40,15 @@ export class Traffic {
       this.spawn(c, player, i * 65);
     }
   }
+  createCar(i) {
+    return new TrafficCar(
+      this.scene,
+      [0xaaa38d, 0x6b8189, 0xa88063, 0x8a9188][i % 4],
+      i % 4,
+    );
+  }
   spawn(c, player, extra = 0) {
+    resetTrafficImpact(c);
     let s =
       player.near.distance +
       (c.direction === 1
@@ -76,8 +86,15 @@ export class Traffic {
     return target;
   }
   update(dt, player, night) {
+    if (dt > 0.02) {
+      const total = Math.min(dt, 0.1),
+        steps = Math.ceil(total * 60);
+      for (let i = 0; i < steps; i++) this.update(total / steps, player, night);
+      return;
+    }
     for (const c of this.cars) {
-      let target = c.preferred;
+      advanceTrafficImpact(c, dt);
+      let target = c.impactHold ? 0 : c.preferred;
       const curve = Math.abs(
         this.path.getCurvatureAtDistance(c.s + 25 * c.direction),
       );
@@ -109,22 +126,22 @@ export class Traffic {
       )
         this.spawn(c, player, Math.floor(this.rng() * 3) * 65);
       this.place(c, dt, night);
-      const dx = player.x - c.sample.x,
-        dz = player.z - c.sample.z;
-      const longitudinal = dx * c.sample.tx + dz * c.sample.tz,
-        lateral = dx * c.sample.nx + dz * c.sample.nz;
-      if (Math.abs(longitudinal) < 4.65 && Math.abs(lateral) < 1.95) {
-        const side = lateral >= 0 ? 1 : -1;
-        player.x += c.sample.nx * side * (1.96 - Math.abs(lateral));
-        player.z += c.sample.nz * side * (1.96 - Math.abs(lateral));
-        player.speed *= Math.exp(-5 * dt);
-      }
     }
+    this.resolveCollisions(dt, player, night);
+  }
+  resolveCollisions(dt, player, night) {
+    this.collisions.update(dt, player, this.cars);
+    for (const c of this.cars)
+      if (!c.waiting && c.car.group.visible && c.impactHold)
+        this.place(c, 0, night);
   }
   place(c, dt, night) {
     const p = this.path.getLanePosition(c.s, c.lane, c.sample);
     p.heading += c.direction < 0 ? Math.PI : 0;
     p.pitch *= c.direction;
+    p.x += c.impactX || 0;
+    p.z += c.impactZ || 0;
+    p.heading += c.impactHeading || 0;
     p.speed = c.speed;
     p.steer = this.path.getCurvatureAtDistance(c.s) * 6;
     c.car.place(p);
@@ -136,11 +153,13 @@ export class Traffic {
   clearNear(s) {
     for (const c of this.cars)
       if (Math.abs(c.s - s) < 20) {
+        resetTrafficImpact(c);
         c.s = s + 150 + this.cars.indexOf(c) * 50;
         this.place(c, 0, 0);
       }
   }
   dispose() {
+    this.collisions.reset();
     for (const c of [...this.cars, ...this.pool]) c.car.dispose();
     this.cars = [];
     this.pool = [];

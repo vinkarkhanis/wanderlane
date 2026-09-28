@@ -61,3 +61,8 @@ Pune facade/window Canvas textures and abstract materials are original CC0 art.
 Pune vegetation currently reuses the original generic broadleaf templates;
 species-specific Pune trees are not yet implemented. Terrain is a labelled
 original synthetic fallback; no DEM has been bundled or claimed as real elevation.
+
+
+## Benchmark facade (2026-09-28)
+
+`assets/art/pune-residential-facade.png` is an original AI-generated fictional residential facade, created with the built-in image-generation tool for this project. It uses no supplied reference photography or map imagery. The exact prompt and provenance are bundled in `assets/art/PROVENANCE.md`. The local build includes both files; no external texture service is required.
