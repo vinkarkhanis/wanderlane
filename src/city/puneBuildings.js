@@ -78,6 +78,7 @@ export function buildingMaterials() {
       }
     return new THREE.MeshStandardMaterial({
       color: 0xffffff,
+      vertexColors: true,
       roughness: index === 4 ? 0.6 : 0.92,
       map: tex(canvas),
       emissiveMap: tex(glow),

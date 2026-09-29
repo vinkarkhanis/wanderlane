@@ -66,3 +66,22 @@ original synthetic fallback; no DEM has been bundled or claimed as real elevatio
 ## Benchmark facade (2026-09-28)
 
 `assets/art/pune-residential-facade.png` is an original AI-generated fictional residential facade, created with the built-in image-generation tool for this project. It uses no supplied reference photography or map imagery. The exact prompt and provenance are bundled in `assets/art/PROVENANCE.md`. The local build includes both files; no external texture service is required.
+
+## Baner neighbourhood frontages (2026-09-29)
+
+The shopfronts, entrance canopies, cornices and Marathi/English sign atlas in
+`src/city/puneFrontages.js` are original procedural artwork covered by the
+project-created-art dedication above. Business and society names are fictional;
+they do not identify surveyed premises. System fonts render the local Canvas
+atlas; no external font or texture is fetched. The imported building footprints,
+roads and geographic attribution remain unchanged. Street treatment now follows
+eligible surface roads across the Pune map, including free roam and every
+journey, wherever building, water, junction and chunk-boundary clearance permits.
+It is procedural local-style decoration, not a surveyed city reconstruction.
+
+Endless Drive includes occasional original neighbourhoods, spaced every eight
+160-metre chunks, using the same generated sign atlas and frontage kit. Building
+sites that are too steep or too close to the road are omitted. These fictional
+settlements are not claimed to represent actual Pune locations. Buildings and
+materials are streamed and disposed with the world, and nearby vegetation is
+excluded from their footprints.

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { terrainHeight } from "./heightfield.js";
 import { random } from "./random.js";
 import { ROAD } from "./config.js";
+import { settlementContains } from "./settlementPlan.js";
 export function makeTerrain(path, index, biome, res) {
   const start = index * ROAD.chunk,
     z0 = path.zAt(start),
@@ -58,7 +59,15 @@ export function makeTerrain(path, index, biome, res) {
   };
   return mesh;
 }
-export function makeScenery(path, index, biome, res, quality, groundHeight) {
+export function makeScenery(
+  path,
+  index,
+  biome,
+  res,
+  quality,
+  groundHeight,
+  settlements = [],
+) {
   const group = new THREE.Group(),
     r = random(path.hash ^ Math.imul(index, 2654435761)),
     start = index * ROAD.chunk;
@@ -89,7 +98,11 @@ export function makeScenery(path, index, biome, res, quality, groundHeight) {
     const off = grove.off + (r() - 0.5) * 34,
       p = path.getLanePosition(s, off);
     path.findNearestRoadPoint(p.x, p.z, sample);
-    if (Math.abs(sample.offset) < 12) continue;
+    if (
+      Math.abs(sample.offset) < 12 ||
+      settlementContains(settlements, p.x, p.z, 5)
+    )
+      continue;
     const h = ground(p.x, p.z, s, off),
       scale = (0.72 + r() * 0.55) * (biome === "canyon" ? 0.57 : 1),
       yaw = r() * 6.28;
@@ -168,7 +181,11 @@ export function makeScenery(path, index, biome, res, quality, groundHeight) {
       off = side * (6.15 + Math.pow(r(), 1.8) * 44),
       p = path.getLanePosition(s, off);
     path.findNearestRoadPoint(p.x, p.z, sample);
-    if (Math.abs(sample.offset) < 6.15) continue;
+    if (
+      Math.abs(sample.offset) < 6.15 ||
+      settlementContains(settlements, p.x, p.z, 5)
+    )
+      continue;
     const patch =
       Math.sin(s * 0.13 + off * 0.32) * Math.sin(s * 0.037 - off * 0.41);
     if (r() > 0.74 + patch * 0.24) continue;

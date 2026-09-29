@@ -10,12 +10,10 @@ import { buildingStyle, markingRanges } from "./puneStyle.js";
 import { buildingMaterials, dressBuilding } from "./puneBuildings.js";
 import { edgeCandidates, tileEdges, junctionNodes } from "./puneEdges.js";
 import { renderEdge } from "./puneEdgeView.js";
-import {
-  benchmarkPlan,
-  benchmarkBays,
-  renderBenchmark,
-} from "./puneBenchmark.js";
+import { cityStreetBays, renderBenchmark } from "./puneBenchmark.js";
 import { benchmarkMaterials } from "./puneSurfaceMaterials.js";
+import { frontagePlan } from "./puneFrontagePlan.js";
+import { frontageMaterials, renderFrontages } from "./puneFrontages.js";
 export const SEASONS = ["Summer", "Monsoon", "Winter"];
 const colors = {
   Summer: [0x9b9566, 0xa5ae74, 0x414548],
@@ -125,7 +123,6 @@ export class CityWorld {
     this.lastCell = "";
     this.detailPlan = detailCandidates(path);
     this.edgePlan = edgeCandidates(path, this.detailPlan);
-    this.benchmarkPlan = benchmarkPlan(path);
     this.junctionNodes = junctionNodes(path);
     this.signalView = new CitySignalView(path);
     this.actors = new CityActors(path, quality);
@@ -182,6 +179,9 @@ export class CityWorld {
     const styles = buildingMaterials();
     this.facades = styles.materials;
     this.facadeTextures = styles.textures;
+    const frontages = frontageMaterials();
+    this.frontageMaterials = frontages.materials;
+    this.frontageTextures = frontages.textures;
     this.res.solar = mat(0x36575b, { roughness: 0.55 });
     this.res.patch = mat(0x353c3d);
     this.res.puddle = mat(0x526365, {
@@ -520,17 +520,36 @@ export class CityWorld {
         }
       }
     }
-    const bays = benchmarkBays(data, this.path, this.benchmarkPlan);
+    const streetParts = new Map();
+    const streetBlock = (x, y, z, w, h, d, yaw, material) => {
+      if (!streetParts.has(material)) streetParts.set(material, []);
+      streetParts.get(material).push([x, y, z, w, h, d, yaw]);
+    };
+    const bays = cityStreetBays(
+      data,
+      this.path,
+      this.junctionNodes,
+      this.quality,
+    );
     renderBenchmark(
       bays,
       data,
       this.path,
-      block,
+      streetBlock,
       this.res,
       (x, z) => this.terrainHeight(data, x, z) - 0.22,
     );
     const styles = {},
       edges = tileEdges(data, this.edgePlan, this.quality);
+    const frontages = frontagePlan(data, this.path);
+    renderFrontages(
+      frontages,
+      this.quality,
+      streetBlock,
+      add,
+      this.res,
+      this.frontageMaterials,
+    );
     let rooftopFittings = 0;
     for (const b of data.buildings) {
       const style = buildingStyle(b);
@@ -561,14 +580,8 @@ export class CityWorld {
           wall ? p.getY(i) / 12 : p.getZ(i) / 12,
         );
       }
-      const benchmark = this.benchmarkPlan.some(
-        (p) =>
-          Math.hypot(
-            p.x - (b.bounds[0] + b.bounds[2]) / 2,
-            p.z - (b.bounds[1] + b.bounds[3]) / 2,
-          ) < 65,
-      );
-      if (benchmark && this.res.benchmarkFacade.map.image) {
+      const benchmark = style.family === "plaster" && style.seed % 2 === 0;
+      {
         const tint = new THREE.Color(
           [0xf5ead9, 0xe0e5df, 0xe6ded3, 0xd6dbda][style.seed % 4],
         );
@@ -578,7 +591,9 @@ export class CityWorld {
       }
       add(
         g,
-        benchmark && this.res.benchmarkFacade.map.image
+        benchmark &&
+          style.family === "plaster" &&
+          this.res.benchmarkFacade.map.image
           ? this.res.benchmarkFacade
           : this.facades[style.index],
       );
@@ -763,7 +778,12 @@ export class CityWorld {
       if (m === this.res.leaf) mesh.customDepthMaterial = this.res.leafDepth;
       mesh.computeBoundingSphere();
       group.add(mesh);
+      return mesh;
     };
+    for (const [m, list] of streetParts) {
+      const mesh = instance(this.res.box, m, list);
+      mesh.userData.building = true;
+    }
     for (let i = 0; i < 3; i++) {
       const k = ["oak", "field", "birch"][i];
       instance(this.res[k + "Wood"], this.res.bark, trees[i], true);
@@ -785,6 +805,7 @@ export class CityWorld {
       mesh.receiveShadow = true;
       mesh.userData.building =
         this.facades.includes(m) ||
+        Object.values(this.frontageMaterials).includes(m) ||
         m === this.res.benchmarkFacade ||
         m === this.res.concrete ||
         [
@@ -809,6 +830,8 @@ export class CityWorld {
       groundSurfaces,
       styles,
       rooftopFittings,
+      frontages,
+      pavementBays: bays.length,
       edges,
       details,
       data,
@@ -870,6 +893,8 @@ export class CityWorld {
     for (const v of Object.values(this.res)) v?.dispose?.();
     for (const m of this.facades) m.dispose();
     for (const t of this.facadeTextures) t.dispose();
+    for (const m of Object.values(this.frontageMaterials)) m.dispose();
+    for (const t of this.frontageTextures) t.dispose();
     for (const t of this.surfaceTextures) t.dispose();
     this.queue.length = 0;
   }
@@ -877,7 +902,9 @@ export class CityWorld {
     const buildingStyles = {};
     let streetProps = 0,
       parkedVehicles = 0,
-      rooftopFittings = 0;
+      rooftopFittings = 0,
+      frontages = 0,
+      pavementBays = 0;
     let buildings = 0,
       vegetation = 0,
       details = 0,
@@ -897,6 +924,8 @@ export class CityWorld {
         0,
       );
       rooftopFittings += c.rooftopFittings;
+      frontages += c.frontages.length;
+      pavementBays += c.pavementBays;
       buildings += c.data.buildings.length;
       vegetation += c.trees;
       details += c.details.length;
@@ -908,6 +937,8 @@ export class CityWorld {
       streetProps,
       parkedVehicles,
       rooftopFittings,
+      frontages,
+      pavementBays,
       elevation: this.manifest.elevation.label,
       vegetation,
       details,

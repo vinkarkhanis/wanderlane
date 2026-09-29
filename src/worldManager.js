@@ -4,6 +4,9 @@ import { BIOMES } from "./biomes.js";
 import { QUALITY, ROAD } from "./config.js";
 import { RoadChunk } from "./roadChunk.js";
 import { makeTerrain, makeScenery } from "./scenery.js";
+import { frontageMaterials } from "./city/puneFrontages.js";
+import { settlementPlan, constrainSettlement } from "./settlementPlan.js";
+import { buildSettlement } from "./settlementView.js";
 export class WorldManager {
   constructor(scene, path, biome = "meadow", quality = "Medium") {
     this.scene = scene;
@@ -18,6 +21,10 @@ export class WorldManager {
         ?.terrain.userData.heightAt(x, z);
     };
     this.wind = { value: 0 };
+    path.resolveContacts = (v, dt) => {
+      for (const chunk of this.chunks.values())
+        constrainSettlement(chunk.settlementPlan, v, dt);
+    };
     this.makeResources();
   }
   makeResources() {
@@ -93,10 +100,12 @@ export class WorldManager {
       group.add(mesh);
     };
     this.res = r;
+    this.settlementResources = frontageMaterials();
   }
   build(i) {
     const road = new RoadChunk(this.path, i, this.biome, this.res),
       terrain = makeTerrain(this.path, i, this.biome, this.res),
+      town = settlementPlan(this.path, i, terrain.userData.heightAt),
       scenery = makeScenery(
         this.path,
         i,
@@ -104,11 +113,26 @@ export class WorldManager {
         this.res,
         QUALITY[this.quality],
         terrain.userData.heightAt,
+        town,
       );
     const group = new THREE.Group();
+    const settlement = buildSettlement(
+      town,
+      this.res,
+      this.settlementResources.materials,
+      this.quality,
+    );
+    scenery.add(settlement.group);
     group.add(road.group, terrain, scenery);
     this.scene.add(group);
-    this.chunks.set(i, { group, road, terrain, scenery });
+    this.chunks.set(i, {
+      group,
+      road,
+      terrain,
+      scenery,
+      settlementPlan: town,
+      settlement,
+    });
   }
   update(distance, time = 0, reduced = false, immediate = false) {
     this.wind.value = reduced ? 0 : time;
@@ -134,6 +158,7 @@ export class WorldManager {
     const c = this.chunks.get(i);
     c.road.dispose();
     c.terrain.geometry.dispose();
+    for (const g of c.settlement.geometries) g.dispose();
     c.scenery.traverse((o) => {
       if (o.isInstancedMesh) o.dispose();
     });
@@ -143,5 +168,14 @@ export class WorldManager {
   dispose() {
     for (const i of [...this.chunks.keys()]) this.remove(i);
     for (const v of Object.values(this.res)) if (v?.dispose) v.dispose();
+    for (const m of Object.values(this.settlementResources.materials))
+      m.dispose();
+    for (const t of this.settlementResources.textures) t.dispose();
+  }
+  get settlementCount() {
+    return [...this.chunks.values()].reduce(
+      (n, c) => n + c.settlementPlan.length,
+      0,
+    );
   }
 }

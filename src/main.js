@@ -632,6 +632,7 @@ window.wanderlane = {
       seed,
       frameMs,
       driveMode,
+      settlementBuildings: world.settlementCount ?? 0,
       season,
       city:
         driveMode === "pune"

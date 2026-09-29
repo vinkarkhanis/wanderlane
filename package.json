@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:real-pune": "node --test tests/real-pune.test.mjs",
+    "test:real-pune": "node --test tests/real-pune.test.mjs tests/benchmark.test.mjs tests/pune-frontages.test.mjs tests/all-mode-streets.test.mjs",
+    "test:streets:browser": "node tests/all-mode-streets-browser.mjs",
+    "test:pune:frontages": "node tests/pune-frontages-browser.mjs",
     "test:real-pune:browser": "node tests/real-pune-discovery-browser.mjs",
     "test:real-pune:keyboard": "node tests/real-pune-keyboard-browser.mjs",
     "test:collisions": "node --test tests/collisions.test.js",
