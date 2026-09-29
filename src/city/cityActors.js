@@ -12,6 +12,7 @@ import {
 } from "./puneShopfronts.js";
 import { roadName } from "./cityDetails.js";
 import { dressLandmark, LANDMARKS } from "./puneLandmarks.js";
+import { dressPuneScene, PUNE_SCENES } from "./puneScenes.js";
 import { renderEdge } from "./puneEdgeView.js";
 
 // Static pieces join CityWorld's per-material merged chunk meshes. Only the
@@ -25,6 +26,9 @@ export class CityActors {
     const mat = (color, extra = {}) =>
       new THREE.MeshStandardMaterial({ color, roughness: 0.86, ...extra });
     this.res = {
+      terracotta: mat(0xa95036),
+      timber: mat(0x57392c),
+      steel: mat(0xaeb7b4, { metalness: 0.65, roughness: 0.35 }),
       ochre: mat(0xba9760),
       teal: mat(0x356f69),
       cream: mat(0xd8caaa),
@@ -60,7 +64,7 @@ export class CityActors {
           m,
         );
       if (p.kind !== "shops") b(0, -0.08, 0, 9, 0.16, 8, r.cream);
-      dressLandmark(p, b, r);
+      if (!PUNE_SCENES[p.id]) dressLandmark(p, b, r);
       // A compact, original kit with safe, visibly distinct street edges.
       if (p.kind === "shops") {
         shopfronts(b, r);
@@ -102,7 +106,7 @@ export class CityActors {
         b(0, 0.18, 2, 4, 0.35, 2, r.ochre);
         b(-2, 1.6, 0.2, 0.12, 2.7, 0.12, r.dark);
         b(-2, 3, 0.2, 0.25, 0.25, 0.25, r.workLamp);
-      } else {
+      } else if (!PUNE_SCENES[p.id]) {
         for (const x of [-3, -1.5, 0, 1.5, 3]) {
           b(x, 0.6, 1, 0.14, 1.2, 0.14, r.cream);
           b(x, 1.05, 1, 1.5, 0.09, 0.09, r.dark);
@@ -114,6 +118,7 @@ export class CityActors {
           b(x, 2.4, -1, 1.8, 1.3, 1.7, r.leaf);
         }
       }
+      dressPuneScene(p, b, r);
       // Parked scooter silhouettes, with tyres touching the local scene pad.
       if (this.quality !== "Low" && ["chai", "stop"].includes(p.kind)) {
         for (const x of [-3.7, -2.8]) {
@@ -150,7 +155,16 @@ export class CityActors {
       const record = { p, y, people, heads, count, phase: 0, near: false };
       records.push(record);
       this.active.add(record);
-      const labels = p.kind === "shops" ? SHOPS : [[p.label, "", "#214c47"]];
+      const labels =
+        p.kind === "shops"
+          ? SHOPS
+          : [
+              [
+                p.label,
+                PUNE_SCENES[p.id] ? "Pune-inspired · fictional scene" : "",
+                "#214c47",
+              ],
+            ];
       labels.forEach(([local, english, color], index) => {
         const canvas = document.createElement("canvas");
         canvas.width = 1024;
@@ -273,8 +287,13 @@ export class CityActors {
       stalls,
       busStops,
       scenes: [...this.active].map((r) => r.p.id),
+      puneScenes: [...this.active]
+        .filter((r) => PUNE_SCENES[r.p.id])
+        .map((r) => r.p.id),
       landmarks: LANDMARKS.filter((l) =>
-        [...this.active].some((r) => r.p.id === l.sceneId),
+        [...this.active].some(
+          (r) => r.p.id === l.sceneId && !PUNE_SCENES[r.p.id],
+        ),
       ).map((l) => l.id),
     };
   }

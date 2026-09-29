@@ -85,3 +85,10 @@ sites that are too steep or too close to the road are omitted. These fictional
 settlements are not claimed to represent actual Pune locations. Buildings and
 materials are streamed and disposed with the world, and nearby vegetation is
 excluded from their footprints.
+# Pune-inspired courtyards and market
+
+`src/city/puneScenes.js` contains original procedural misal-and-chai tables,
+a wada-inspired timber gateway with tiled eaves and a tulsi planter, and flower
+and vegetable handcarts. These dress fictional scenes along the Baner–Pashan
+pilot; they are not surveyed businesses or replicas of historic monuments.
+All geometry and colors are generated locally and share chunk cleanup.

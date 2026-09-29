@@ -7,12 +7,12 @@ export function discoveryTrip(path, id) {
   const offsets = monsoon ? [800, 1280, 2235] : [60, 790, 1341, 2600];
   const labels = monsoon
     ? [
-        "Compound gardens · local-style scene",
-        "Park Ridge Road",
+        "Wada-style courtyard · fictional scene",
+        "Flower & produce market · fictional scene",
         "Pashan–Sus Road · arrival",
       ]
     : [
-        "Sandhya Chai · fictional scene",
+        "Misal & chai courtyard · fictional scene",
         "Pancard Club Road shopfronts",
         "Neighbourhood bus stop · fictional scene",
         "Baner neighbourhood · arrival",
