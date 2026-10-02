@@ -1,5 +1,10 @@
 import { inside, nearest } from "./spatial.js";
 import { STREET_SCENES } from "./puneStreetDetails.js";
+import {
+  JOURNEY_PLACES,
+  bayContains,
+  clearParkingApproach,
+} from "./puneJourney.js";
 export const BENCHMARK = { start: 10380, length: 200 };
 // Offline route geometry remains authoritative. Every two-metre bay is checked
 // against other road corridors and imported footprints before it is dressed.
@@ -96,6 +101,13 @@ export function cityStreetBays(data, path, junctions, quality = "Medium") {
         const off = (r.width / 2 + 1.55) * side;
         const x = r.p[0] + dx * d - dz * off,
           z = r.p[1] + dz * d + dx * off;
+        if (
+          Object.values(JOURNEY_PLACES).some((p) =>
+            bayContains(p, x, z, span / 2 + 2),
+          )
+        )
+          continue;
+        if (!clearParkingApproach(path, x, z, span / 2 + 3)) continue;
         if (!clearStreetBay(data, path, x, z, dx, dz, span)) continue;
         result.push({
           x,

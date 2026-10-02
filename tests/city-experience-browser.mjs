@@ -88,6 +88,8 @@ try {
   assert.ok(signals.gaps.every((g) => g >= 1.99));
   assert.ok(signals.resumed > 1);
   assert.equal(signals.children, 0);
+  if (await page.locator("#cityTrip.trip-compact").count())
+    await page.click("#tripDetails");
   await page.click("#tripCancel");
   await page.click("#tripStart");
   assert.equal((await state()).experience.hardBrakes, 0);

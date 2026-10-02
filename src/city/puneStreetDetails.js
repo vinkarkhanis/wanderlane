@@ -1,7 +1,9 @@
 import { nearest, inside } from "./spatial.js";
+import { MARKET_SITES } from "./puneMarketSites.js";
 // Metre coordinates selected against ALL imported roads and owning chunk geometry.
 // These are fictional roadside scenes, not claims of surveyed shops or bus stops.
 export const STREET_SCENES = [
+  ...MARKET_SITES,
   {
     id: "evening-chai-crowd",
     s: 9750,

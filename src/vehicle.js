@@ -133,7 +133,8 @@ export class Vehicle {
       const look = this.path.city
           ? 4 + Math.abs(this.speed) * 0.55
           : 9 + Math.abs(this.speed) * 0.9,
-        t = this.path.getLanePosition(
+        t = (this.path.getDrivePosition || this.path.getLanePosition).call(
+          this.path,
           p.distance + look,
           this.lane,
           this.target,
@@ -168,6 +169,7 @@ export class Vehicle {
           goal,
           traffic.safeSpeed(p.distance, p.offset, this.speed),
         );
+      goal = Math.min(goal, this.path.arrivalSpeedLimit?.(this) ?? Infinity);
       if (manual) {
         steerTarget = manual;
         this.override = 0.65;

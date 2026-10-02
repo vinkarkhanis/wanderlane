@@ -1,6 +1,7 @@
 import { Grid, nearest, inside } from "./spatial.js";
 import { HERO_ROUTE, heroProgress } from "./puneStyle.js";
 import { STREET_SCENES } from "./puneStreetDetails.js";
+import { clearParkingApproach } from "./puneJourney.js";
 export const EDGE_BUDGET = { Low: 12, Medium: 28, High: 40 };
 export function junctionNodes(path) {
   const links = new Map();
@@ -25,7 +26,10 @@ export function edgeCandidates(path, details = []) {
     path.segments
       .filter(
         (r) =>
-          heroProgress(r.s + r.length / 2, path.length) < HERO_ROUTE.length,
+          heroProgress(
+            path.canonicalDistance?.(r.s + r.length / 2) ?? r.s + r.length / 2,
+            path.canonicalLength ?? path.length,
+          ) < HERO_ROUTE.length,
       )
       .map((r) => r.id),
   );
@@ -55,6 +59,7 @@ export function edgeCandidates(path, details = []) {
         const off = r.width / 2 + radius + 1.3;
         const x = r.p[0] + dx * d - dz * off * side,
           z = r.p[1] + dz * d + dx * off * side;
+        if (!clearParkingApproach(path, x, z, radius + 2)) continue;
         const lx = ((x % 256) + 256) % 256,
           lz = ((z % 256) + 256) % 256;
         if (Math.min(lx, lz, 256 - lx, 256 - lz) < radius + 1) continue;

@@ -31,6 +31,7 @@ try {
   await page.waitForFunction(
     () => window.wanderlane.state.experience.status === "active",
   );
+  await page.click("#tripDetails");
   await page.click("#postcardBtn");
   assert.ok(await page.locator("#postcardDialog").isVisible());
   assert.ok(

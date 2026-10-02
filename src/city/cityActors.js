@@ -22,6 +22,7 @@ export class CityActors {
     this.path = path;
     this.quality = quality;
     this.active = new Set();
+    this.signCache = new Map();
     this.dummy = new THREE.Object3D();
     const mat = (color, extra = {}) =>
       new THREE.MeshStandardMaterial({ color, roughness: 0.86, ...extra });
@@ -166,46 +167,73 @@ export class CityActors {
               ],
             ];
       labels.forEach(([local, english, color], index) => {
-        const canvas = document.createElement("canvas");
-        canvas.width = 1024;
-        canvas.height = 128;
-        const ctx = canvas.getContext("2d");
-        ctx.fillStyle = color;
-        ctx.fillRect(0, 0, 1024, 128);
-        ctx.strokeStyle = "#dfd1a9";
-        ctx.lineWidth = 5;
-        ctx.strokeRect(5, 5, 1014, 118);
-        ctx.fillStyle = "#f3e3be";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.font = "600 48px sans-serif";
-        ctx.fillText(roadName(local), 512, english ? 44 : 64, 980);
-        ctx.font = "500 30px sans-serif";
-        if (english) ctx.fillText(english, 512, 99, 980);
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.colorSpace = THREE.SRGBColorSpace;
-        const material = new THREE.MeshStandardMaterial({
-          map: texture,
-          emissiveMap: texture,
-          emissive: 0xffffff,
-          emissiveIntensity: 0.4,
-          side: THREE.DoubleSide,
-        });
-        const geometry = new THREE.PlaneGeometry(
-            p.kind === "shops" ? 1.78 : 4,
-            0.5,
-          ),
-          sign = new THREE.Mesh(geometry, material);
+        const key = JSON.stringify([local, english, color, p.kind]);
+        let material = this.signCache.get(key);
+        if (!material) {
+          const canvas = document.createElement("canvas");
+          canvas.width = 1024;
+          canvas.height = 512;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = color;
+          ctx.fillRect(0, 0, 1024, 512);
+          ctx.strokeStyle = "#dfd1a9";
+          ctx.lineWidth = 10;
+          ctx.strokeRect(16, 16, 992, 480);
+          ctx.fillStyle = "#fff6de";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          const parts = local.split(" · ");
+          const title = roadName(parts.length > 1 ? parts[1] : local);
+          const subtitle = parts.length > 1 ? parts[0] : english;
+          // Two generous lines on narrow bays; never squeeze an entire name
+          // into the old eight-to-one texture on a nearly square shop fascia.
+          const words = title.split(" ");
+          const lines =
+            p.kind === "shops" && words.length > 1
+              ? [words.slice(0, -1).join(" "), words.at(-1)]
+              : [title];
+          ctx.font = 'bold 142px "Nirmala UI", sans-serif';
+          lines.forEach((line, i) =>
+            ctx.fillText(
+              line,
+              512,
+              lines.length === 1 ? 220 : 158 + i * 155,
+              930,
+            ),
+          );
+          ctx.font = "bold 54px Arial, sans-serif";
+          if (subtitle) ctx.fillText(subtitle, 512, 432, 930);
+          const texture = new THREE.CanvasTexture(canvas);
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.anisotropy = 8;
+          material = new THREE.MeshStandardMaterial({
+            map: texture,
+            emissiveMap: texture,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.4,
+            side: THREE.DoubleSide,
+          });
+          this.signCache.set(key, material);
+        }
+        const shop = p.kind === "shops";
+        const width = shop ? 1.78 : 4;
+        const signHeight = shop ? 1.05 : 1.15;
+        const signY = shop ? 3.37 : 3.15;
+        const geometry = new THREE.PlaneGeometry(width, signHeight);
         const sx = p.kind === "shops" ? -4.75 + index * 1.9 : 0;
-        const sz = p.kind === "shops" ? -0.29 : 1.2;
-        sign.position.set(
+        const sz = -1.12;
+        b(sx, signY, sz + 0.1, width + 0.1, signHeight + 0.12, 0.16, r.dark);
+        if (!shop)
+          for (const dx of [-1.65, 1.65])
+            b(dx, 2.75, sz + 0.1, 0.08, 1.4, 0.08, r.steel);
+        geometry.rotateY(p.yaw + Math.PI);
+        geometry.translate(
           p.x + sx * co + sz * si,
-          y + 3.02,
+          y + signY,
           p.z - sx * si + sz * co,
         );
-        sign.rotation.y = p.yaw + (p.kind === "shops" ? Math.PI : 0);
-        group.add(sign);
-        owned.push(texture, material, geometry);
+        // Shared artwork and chunk batching keep repeated markets affordable.
+        add(geometry, material);
       });
       this.pose(record, 0);
     }
@@ -281,9 +309,11 @@ export class CityActors {
     }
     return {
       pedestrians,
-      shops: [...this.active].some((r) => r.p.kind === "shops")
-        ? SHOPS.length
-        : 0,
+      shops:
+        [...this.active].filter((r) => r.p.kind === "shops").length *
+        SHOPS.length,
+      marketClusters: [...this.active].filter((r) => r.p.kind === "shops")
+        .length,
       stalls,
       busStops,
       scenes: [...this.active].map((r) => r.p.id),
@@ -299,6 +329,11 @@ export class CityActors {
   }
   dispose() {
     this.active.clear();
+    for (const material of this.signCache.values()) {
+      material.map.dispose();
+      material.dispose();
+    }
+    this.signCache.clear();
     this.box.dispose();
     this.head.dispose();
     Object.values(this.res).forEach((m) => m.dispose());

@@ -1,8 +1,8 @@
 export const FLEET = Object.freeze([
-  "car",
   "rickshaw",
   "scooter",
   "bus",
+  "car",
   "rickshaw",
   "car",
   "scooter",

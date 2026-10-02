@@ -18,6 +18,7 @@ import { detailCandidates } from "../src/city/cityDetails.js";
 import { nearest, inside } from "../src/city/spatial.js";
 import { discoveryTrip, DiscoveryJournal } from "../src/city/puneDiscovery.js";
 import { CityExperience } from "../src/city/cityExperience.js";
+import { clearParkingApproach } from "../src/city/puneJourney.js";
 const base = "assets/cities/pune/";
 const manifest = JSON.parse(fs.readFileSync(base + "manifest.json"));
 const nav = JSON.parse(fs.readFileSync(base + manifest.navigation));
@@ -51,7 +52,10 @@ test("hero edges are deterministic, budgeted, seam-safe and clear all geometry",
   assert.deepEqual(plan, edgeCandidates(path, detailCandidates(path)));
   const loaded = chunks.flatMap((c) => tileEdges(c, plan, "High"));
   const junctions = junctionNodes(path);
-  assert.ok(loaded.length > 30, `only ${loaded.length} props`);
+  // Parking approaches deliberately reserve roadside space from decoration.
+  assert.ok(loaded.length >= 30, `only ${loaded.length} props`);
+  for (const p of loaded)
+    assert.ok(clearParkingApproach(path, p.x, p.z, p.radius + 2));
   assert.deepEqual(
     loaded.map((p) => p.id).sort(),
     [...chunks]
@@ -150,6 +154,14 @@ test("both discovery drives progress end to end and journal survives a restart",
         },
         0,
       );
+    assert.equal(e.status, "active"); // Passing the destination cannot finish a parking journey.
+    for (let i = 0; i < 21; i++)
+      e.update(0.1, {
+        x: d.arrival.x,
+        z: d.arrival.z,
+        speed: 0,
+        near: { distance: d.arrival.s, routeGap: 8, offset: 8, width: 7 },
+      });
     assert.equal(e.status, "completed");
     assert.equal(e.snapshot.progress, 1);
     e.start();

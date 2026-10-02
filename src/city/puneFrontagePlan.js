@@ -1,5 +1,6 @@
 import { inside, nearest } from "./spatial.js";
 import { buildingStyle, HERO_ROUTE } from "./puneStyle.js";
+import { streetCharacter } from "./puneJourney.js";
 
 export const NEIGHBOURHOOD = { start: HERO_ROUTE.start, length: 500 };
 
@@ -112,9 +113,13 @@ export function frontagePlan(data, path, routePlan) {
           family: style.family,
           seed: style.seed,
           distance,
+          character: streetCharacter(road),
           retail:
             style.family === "shops" ||
-            (style.family !== "bungalow" && style.seed % 3 === 0),
+            (style.family !== "bungalow" &&
+              (streetCharacter(road) === "commercial"
+                ? style.seed % 3 !== 2
+                : style.seed % 5 === 0)),
         };
         if (
           (!best || distance < best.distance) &&

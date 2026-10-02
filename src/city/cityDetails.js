@@ -1,5 +1,6 @@
 import { CITY_DETAILS } from "../config.js";
 import { Grid, nearest, inside } from "./spatial.js";
+import { clearParkingApproach } from "./puneJourney.js";
 
 export function roadName(value) {
   if (
@@ -34,6 +35,7 @@ export function detailCandidates(path) {
       const off = r.width / 2 + CITY_DETAILS.clearance + radius;
       const x = r.p[0] + dx * d - dz * off * side,
         z = r.p[1] + dz * d + dx * off * side;
+      if (path.city && !clearParkingApproach(path, x, z, radius + 2)) continue;
       // Keep the entire object in its owning tile; this also protects tile seams.
       const localX = ((x % 256) + 256) % 256,
         localZ = ((z % 256) + 256) % 256;

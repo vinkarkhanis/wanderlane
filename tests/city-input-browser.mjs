@@ -21,6 +21,15 @@ try {
   await page.waitForFunction(() => window.wanderlane);
   await page.click("#startBtn");
   await page.click("#tripStart");
+  await page.waitForFunction(() => {
+    const s = window.wanderlane.state;
+    return (
+      s.experience.status === "active" &&
+      !s.paused &&
+      !s.city.pending &&
+      !s.city.queued
+    );
+  });
   for (const key of ["w", "ArrowUp"]) {
     await page.keyboard.down(key);
     await page.waitForTimeout(600);
@@ -54,8 +63,9 @@ try {
   await page.keyboard.press("f");
   assert.equal((await state(page)).camera, 3);
   await page.keyboard.press("f");
+  const trafficBefore = (await state(page)).traffic;
   await page.keyboard.press("g");
-  assert.equal((await state(page)).traffic, 1);
+  assert.equal((await state(page)).traffic, (trafficBefore + 1) % 3);
   await page.keyboard.press("m");
   assert.equal((await state(page)).muted, true);
   await page.keyboard.press("m");
@@ -156,15 +166,18 @@ try {
   });
   const overlap = async () =>
     mobile.evaluate(() => {
-      const a = document.getElementById("cityTrip").getBoundingClientRect();
+      const panels = ["cityTrip", "journeyMap"].map((id) =>
+        document.getElementById(id).getBoundingClientRect(),
+      );
       return [...document.querySelectorAll("#touch button,.toolbar button")]
         .filter((e) => {
           const b = e.getBoundingClientRect();
-          return (
-            a.left < b.right &&
-            a.right > b.left &&
-            a.top < b.bottom &&
-            a.bottom > b.top
+          return panels.some(
+            (a) =>
+              a.left < b.right &&
+              a.right > b.left &&
+              a.top < b.bottom &&
+              a.bottom > b.top,
           );
         })
         .map((e) => e.textContent);
@@ -173,6 +186,8 @@ try {
   await mobile.screenshot({ path: "tests/chai-mobile-portrait.png" });
   await mobile.click("#settingsBtn");
   await mobile.click("#resumeBtn");
+  if (await mobile.locator("#cityTrip.trip-compact").count())
+    await mobile.click("#tripDetails");
   await mobile.click("#tripCancel");
   await mobile.click("#tripStart");
   assert.equal((await state(mobile)).experience.objectiveIndex, 0);

@@ -6,6 +6,7 @@ Thumbs.db
 # Generated local QA artifacts
 /tests/*.png
 /tests/*-results.json
+/tests/journey-evidence/
 /data-sources/pune/raw/
 /tests/pune-reimport/
 /dist/

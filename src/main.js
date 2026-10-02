@@ -9,6 +9,13 @@ import {
 } from "./city/puneDiscovery.js";
 import { CitySignals } from "./city/citySignals.js";
 import { CityTripUI } from "./city/cityTripUI.js";
+import {
+  journeyNavigation,
+  PUNE_FORK,
+  JOURNEY_PLACES,
+} from "./city/puneJourney.js";
+import { CityJourneyMap } from "./city/cityJourneyMap.js";
+import { signalPlan } from "./city/citySignals.js";
 import * as THREE from "three";
 import { RoadPath } from "./roadPath.js";
 import { WorldManager } from "./worldManager.js";
@@ -44,7 +51,9 @@ const scene = new THREE.Scene(),
   audio = new AudioSystem(),
   particles = new Particles(scene);
 const journal = new DiscoveryJournal();
+const journeyMap = new CityJourneyMap();
 let endlessLane = 2;
+let cityActivityIntroduced = saved.cityActivityVersion === 1;
 let experience = null,
   signals = null;
 let driveMode = "endless",
@@ -71,6 +80,7 @@ const tripUI = new CityTripUI(
     if (!experience || switching) return;
     controls.clear();
     auto = false;
+    usePuneRoute(el("journeyRoute").value);
     chooseDiscovery();
     vehicle.reset(experience.definition.start, -1.6);
     signals.reset(vehicle.near.distance);
@@ -149,7 +159,7 @@ async function switchMode() {
       const manifest = await get("manifest.json"),
         nav = await get(manifest.navigation);
       cityData = { manifest, nav, base };
-      nextPath = new CityPath(nav, manifest);
+      nextPath = new CityPath(journeyNavigation(nav), manifest);
       nextWorld = new CityWorld(
         scene,
         nextPath,
@@ -170,7 +180,11 @@ async function switchMode() {
       nextPath.groundHeight = (x, z) => nextWorld.heightAt(x, z);
       nextPath.resolveContacts = (v, dt) => nextWorld.constrain(v, dt);
     }
-    const trafficMode = traffic.mode;
+    // Enable the requested lived-in city once; subsequent Off/Light choices
+    // remain persistent and switching back to Pune does not override them.
+    const trafficMode =
+      requested === "pune" && !cityActivityIntroduced ? 2 : traffic.mode;
+    if (requested === "pune") cityActivityIntroduced = true;
     experience?.dispose();
     signals?.dispose();
     world.dispose();
@@ -179,9 +193,11 @@ async function switchMode() {
     vehicle = nextVehicle;
     world = nextWorld;
     driveMode = requested;
+    if (requested === "pune") el("journeyRoute").value = "main";
     experience = driveMode === "pune" ? new CityExperience(path) : null;
     if (experience) {
       experience.journal = journal;
+      attachJourneyDriving();
       chooseDiscovery();
     }
     signals = driveMode === "pune" ? new CitySignals(path) : null;
@@ -237,8 +253,11 @@ function persist() {
     master: audio.master,
     engine: audio.engine,
     ambience: audio.ambience,
+    music: audio.music,
+    musicMood: audio.musicMood,
     muted: audio.muted,
     traffic: traffic?.mode ?? 0,
+    cityActivityVersion: cityActivityIntroduced ? 1 : 0,
   });
 }
 function setQuality() {
@@ -397,13 +416,89 @@ function chooseDiscovery() {
     id === "evening-chai-run" ? chaiTrip(path) : discoveryTrip(path, id);
   experience.reset();
 }
-el("discoveryDrive").addEventListener("change", () => {
-  if (experience?.status !== "active") chooseDiscovery();
+function attachJourneyDriving() {
+  path.getDrivePosition = (s, lane, out) =>
+    experience.drivePosition(s, lane, out);
+  path.arrivalSpeedLimit = (v) => experience.arrivalSpeedLimit(v);
+}
+function usePuneRoute(choice) {
+  if (!path.city || !experience) return;
+  if (el("discoveryDrive").value === "baner-evening") choice = "main";
+  if (choice === path.journeyChoice) return;
+  const previousPath = path,
+    active = experience.status === "active";
+  const canonical = previousPath.canonicalDistance(vehicle.near.distance);
+  const lastCanonical = previousPath.canonicalDistance(experience.last);
+  const next = new CityPath(
+    journeyNavigation(cityData.nav, choice),
+    cityData.manifest,
+  );
+  next.groundHeight = (x, z) => world.heightAt(x, z);
+  next.resolveContacts = (v, dt) => world.constrain(v, dt);
+  path = next;
+  vehicle.path = path;
+  vehicle.near.distance = path.journeyDistance(canonical);
+  path.findNearestRoadPoint(vehicle.x, vehicle.z, vehicle.near, vehicle.y);
+  world.path = path;
+  world.actors.path = path;
+  world.signalView.path = path;
+  world.signalView.plan = signalPlan(path);
+  const signalTime = signals.time;
+  signals.dispose();
+  signals = new CitySignals(path);
+  signals.time = signalTime;
+  signals.reset(vehicle.near.distance);
+  world.signals = signals;
+  experience.path = path;
+  experience.definition =
+    el("discoveryDrive").value === "evening-chai-run"
+      ? chaiTrip(path)
+      : discoveryTrip(path, el("discoveryDrive").value);
+  if (active) experience.last = path.journeyDistance(lastCanonical);
+  else experience.reset();
+  attachJourneyDriving();
+  traffic.path = path;
+  traffic.signals = signals;
+  traffic.setMode(traffic.mode, vehicle);
+  el("journeyRoute").value = choice;
+}
+el("journeyRoute").addEventListener("change", () => {
+  if (switching) return;
+  const canonical = path.canonicalDistance?.(vehicle.near.distance);
+  if (experience?.status === "active" && canonical > path.nav.fork.start + 5) {
+    el("journeyRoute").value = path.journeyChoice;
+    return;
+  }
+  usePuneRoute(el("journeyRoute").value);
+  el("journeyRoute").blur();
 });
+el("discoveryDrive").addEventListener("change", () => {
+  if (experience?.status !== "active") {
+    usePuneRoute(el("journeyRoute").value);
+    chooseDiscovery();
+  }
+});
+function currentPostcard() {
+  const a = experience?.definition.arrival;
+  if (
+    a &&
+    experience.status === "completed" &&
+    Math.hypot(vehicle.x - a.x, vehicle.z - a.z) < 25
+  )
+    return a;
+  return {
+    ...POSTCARD,
+    ...path.sampleAtDistance(
+      path.journeyDistance?.(POSTCARD.s) ?? POSTCARD.s,
+      {},
+    ),
+    radius: POSTCARD.radius,
+  };
+}
 function canPostcard() {
   if (!path.city || Math.abs(vehicle.speed) > 0.8 || paused) return false;
-  const p = path.sampleAtDistance(POSTCARD.s, {});
-  return Math.hypot(vehicle.x - p.x, vehicle.z - p.z) < POSTCARD.radius;
+  const p = currentPostcard();
+  return Math.hypot(vehicle.x - p.x, vehicle.z - p.z) < (p.radius ?? 25);
 }
 el("postcardBtn").addEventListener("click", () => {
   if (!canPostcard()) return;
@@ -412,7 +507,12 @@ el("postcardBtn").addEventListener("click", () => {
   paused = true;
   renderer.render(scene, rig.cam);
   el("postcardImage").src = renderer.domElement.toDataURL("image/png");
-  journal.postcard(POSTCARD.id);
+  const postcard = currentPostcard();
+  el("postcardCaption").textContent = postcard.label;
+  el("postcardImage").alt = postcard.label;
+  el("postcardDownload").href = el("postcardImage").src;
+  el("postcardDownload").download = `wanderlane-${postcard.id}.png`;
+  journal.postcard(postcard.id);
   el("postcardDialog").showModal();
   updateLabels();
 });
@@ -435,6 +535,7 @@ for (const [id, key, defaultValue] of [
   ["masterVolume", "master", 0.55],
   ["engineVolume", "engine", 0.6],
   ["ambienceVolume", "ambience", 0.5],
+  ["musicVolume", "music", 0.45],
 ]) {
   audio[key] = Math.max(0, Math.min(1, Number(saved[key] ?? defaultValue)));
   el(id).value = audio[key];
@@ -444,6 +545,15 @@ for (const [id, key, defaultValue] of [
   });
 }
 audio.muted = !!saved.muted;
+audio.musicMood = ["off", "chill", "ambient", "night"].includes(saved.musicMood)
+  ? saved.musicMood
+  : "off";
+el("musicMood").value = audio.musicMood;
+el("musicMood").addEventListener("change", () => {
+  audio.musicMood = el("musicMood").value;
+  audio.start();
+  persist();
+});
 traffic.setMode([0, 1, 2].includes(saved.traffic) ? saved.traffic : 0, vehicle);
 el("driveMode").addEventListener("change", switchMode);
 el("puneSeason").addEventListener("change", () => {
@@ -495,6 +605,11 @@ addEventListener("resize", () => {
 document.addEventListener("visibilitychange", () => {
   controls.clear();
   if (document.hidden && started && !paused) pause();
+  // Animation frames may stop in a hidden tab; silence audio immediately.
+  if (document.hidden && audio.ctx) {
+    audio.gain.gain.cancelScheduledValues(audio.ctx.currentTime);
+    audio.gain.gain.setValueAtTime(0, audio.ctx.currentTime);
+  }
 });
 renderer.domElement.addEventListener("webglcontextlost", (e) => {
   e.preventDefault();
@@ -526,6 +641,27 @@ function loop(now) {
     while (accumulator >= step) {
       presentation.capture(vehicle);
       vehicle.update(step, input, auto, biome, traffic);
+      if (
+        !auto &&
+        experience?.status === "active" &&
+        path.city &&
+        el("discoveryDrive").value !== "baner-evening" &&
+        vehicle.near.routeGap > 3 &&
+        experience.highWater >= experience.definition.distance - 800
+      ) {
+        if (
+          path.journeyChoice === "main" &&
+          PUNE_FORK.roads.slice(0, 4).includes(vehicle.near.roadId)
+        )
+          usePuneRoute("detour");
+        else if (
+          path.journeyChoice === "detour" &&
+          cityData.nav.route.edges
+            .slice(PUNE_FORK.from, PUNE_FORK.from + 4)
+            .some((e) => e.road === vehicle.near.roadId)
+        )
+          usePuneRoute("main");
+      }
       const violations = signals?.update(step, vehicle) || 0;
       experience?.update(step, vehicle, violations);
       if (experience?.status === "completed" && auto) {
@@ -581,7 +717,9 @@ function loop(now) {
       ? {
           district:
             experience?.definition.objectives[experience.objectiveIndex]
-              ?.district ?? "Pashan approach",
+              ?.district ??
+            experience?.definition.objectives.at(-1)?.district ??
+            "Pashan approach",
           season,
           time: experience?.status === "active" ? experience.elapsed : time,
         }
@@ -596,16 +734,36 @@ function loop(now) {
         ...entries.drives.map((d) => `${d.name} · ${d.quality}`),
         ...entries.scenes.map((s) => `${s.label} — ${s.provenance}`),
         ...entries.postcards.map(
-          () => "A pause for chai · postcard saved for this visit",
+          (id) =>
+            `${JOURNEY_PLACES[id]?.label ?? POSTCARD.label} · postcard collected`,
         ),
       ].join("\n") ||
-      "Take the long way. Your discoveries stay for this visit.";
+      "Take the long way. Discoveries are saved on this device.";
     if (el("journalEntries").textContent !== journalText)
       el("journalEntries").textContent = journalText;
     tripUI.update(
       experience?.snapshot,
       started && !paused && driveMode === "pune",
     );
+    journeyMap.update(
+      path,
+      vehicle,
+      experience?.snapshot,
+      started && !paused && driveMode === "pune",
+    );
+    const canonical = path.city
+      ? path.canonicalDistance(vehicle.near.distance)
+      : 0;
+    const forkGap = path.city ? path.nav.fork.start - canonical : Infinity;
+    const routeChoiceVisible =
+      driveMode === "pune" &&
+      el("discoveryDrive").value !== "baner-evening" &&
+      (experience.status !== "active" || (forkGap >= -5 && forkGap < 180));
+    el("journeyRouteChoice").hidden = !routeChoiceVisible;
+    el("journeyRouteHint").textContent =
+      experience?.status === "active"
+        ? `Fork in ${Math.max(0, Math.round(forkGap))} m · both routes reconnect`
+        : "Park Ridge Road or a 140 m longer detour. Both reach the same stop.";
     el("speed").textContent = Math.round(Math.abs(vehicle.speed) * 3.6);
     el("dist").textContent = vehicle.dist.toFixed(2);
     el("surface").textContent = (vehicle.surface || "Asphalt").toUpperCase();
@@ -696,6 +854,8 @@ window.wanderlane = {
       instrumentSpeed: car.cockpit.lastSpeed,
       muted: audio.muted,
       audioStatus: audio.status,
+      musicMood: audio.musicMood,
+      musicVolume: audio.music,
       audioNodes: audio.nodes?.length ?? 0,
       quality,
       reduced,

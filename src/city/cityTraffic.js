@@ -11,10 +11,10 @@ export class CityTraffic extends Traffic {
   trafficCount(mode) {
     return (
       this.quality === "Low"
-        ? [0, 4, 8]
+        ? [0, 6, 12]
         : this.quality === "High"
-          ? [0, 6, 14]
-          : [0, 5, 11]
+          ? [0, 12, 28]
+          : [0, 9, 20]
     )[mode];
   }
   createCar(i) {
@@ -29,7 +29,7 @@ export class CityTraffic extends Traffic {
       c.speed = Math.min(c.speed, c.preferred);
     }
     for (let i = 0; i < this.cars.length; i++)
-      this.spawn(this.cars[i], player, i * 65);
+      this.spawn(this.cars[i], player, i * 19);
   }
   spawn(c, player, extra = 0) {
     resetTrafficImpact(c);
@@ -41,14 +41,15 @@ export class CityTraffic extends Traffic {
     const sample = (this.spawnSample ??= {});
     let s,
       found = false;
-    for (let i = 0; i < 80; i++) {
-      s = player.near.distance + 120 + ((extra + i * 31) % 330);
+    for (let i = 0; i < 120; i++) {
+      // Populate the visible approach first, then the wider local corridor.
+      s = player.near.distance + 48 + ((extra + i * 23) % 410);
       this.path.getLanePosition(s, -1.6, sample);
       if (
         this.path.nearJunction(s) ||
-        (this.signals?.stopDistance(s, 8) ?? Infinity) < 70 ||
+        (this.signals?.stopDistance(s, 8) ?? Infinity) < 18 ||
         Math.abs(this.path.getCurvatureAtDistance(s)) > 0.04 ||
-        Math.hypot(sample.x - px, sample.z - pz) < 85
+        Math.hypot(sample.x - px, sample.z - pz) < 42
       )
         continue;
       if (
@@ -56,7 +57,8 @@ export class CityTraffic extends Traffic {
           (o) =>
             o !== c &&
             o.car.group.visible &&
-            (Math.abs(delta(o.s, s, this.path.length)) < 28 ||
+            (Math.abs(delta(o.s, s, this.path.length)) <
+              Math.max(15, followingGap(c.car.bounds, o.car.bounds) + 5) ||
               Math.hypot(sample.x - o.sample.x, sample.z - o.sample.z) < 12),
         )
       )

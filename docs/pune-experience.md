@@ -17,7 +17,8 @@ place node 761969935. Pashan Lake is relation 2794610 in chunks -4,6 through
 is explicitly the lake approach, approximately 765 metres northeast of the
 mapped water. No invented shoreline, lake gate, or entrance is rendered.
 
-`puneStreetDetails.js` records eight stable positions. Selection searched
+`puneStreetDetails.js` retains the eight original landmark positions alongside
+the generated market sites described below. Original-site selection searched
 forward from route anchors 9750, 10450, 300, 1800, 2700, 3500, 3980 and 4860
 for a 7 m radius clear of every imported road corridor, building bounding box,
 water polygon and tile edge. Tests revalidate every position against the shipped
@@ -35,14 +36,73 @@ stops its front bumper plus 1 m before that boundary. Player centre crossings
 are scored once per pass, with lane, height and heading checks. Return to Road
 resets the crossing baseline so a teleport cannot incur a red-light violation.
 
-Resources: street geometry merges into owning chunks, people use shared box
-instances (1/3/4 per scene for Low/Medium/High), and signals share lamp materials.
-Eight scenes bound pedestrians to 32 globally, with streaming lowering the
-active count. Traffic retains Off/Light/Normal counts 0/3/7. City audio adds a
-fixed graph only after a gesture; switching mode ramps its gains to zero.
+The route has 41 additional fictional six-shop markets, placed offline with
+`node tools/plan-pune-markets.mjs`. Sites target 180 m intervals and search
+nearby safe parcels; the actual average is about 260 m and the longest gap
+between new clusters is under 650 m. Every site retains the seven-metre
+clearance checks above. More eligible building frontages also have retail
+displays. These are invented businesses, not surveyed shops.
+
+Street geometry and signboards merge into owning chunks. Shop artwork is
+shared across all markets and disposed with the city. Each loaded market has
+6/12/16 people on Low/Medium/High: pavement walkers, customers entering shops,
+and shopkeepers. Only nearby people animate at 12 Hz; Low and reduced-motion
+retain static crowds. Non-market scenes retain their smaller budgets.
+
+Pune traffic caps (Off/Light/Normal) are 0/6/12 on Low, 0/9/20 on Medium and
+0/12/28 on High. The mixed fleet includes buses, rickshaws, motorcycles,
+scooters and cars, following the existing directed route with safe following
+gaps and signal stops. Unsafe spawns wait rather than overlap. First load of
+this city-activity update enables Normal traffic once; subsequent Off/Light
+choices persist. City audio still adds a fixed graph only after a gesture.
+
+Validation: `npm run test:city`, `npm run test:real-pune`,
+`npm run test:city:systems`, and `npm run test:city:activity` (local preview
+server required for browser checks). The activity browser check covers the
+one-time setting update, explicit Off persistence, drive progress, local
+vehicle mix, market crowds and repeated mode-switch resource counts.
+
+## Route choice and arrival
+
+The original Explorer remains the geographic reference. An alternate branch
+replaces route edges 202–211: 418 m of existing Park Ridge Road, Wakeshwar Road
+and unnamed residential roads reconnect at the same imported node, compared
+with 279 m on the main branch. The alternate roads are surface roads and follow
+their permitted direction. No map import or road geometry was added. Choose
+the branch before an Evening Chai Run or Monsoon Pashan Drive, or near the fork.
+Manual drivers can also take either turn. Progress earned before the fork is
+retained; turn guidance, the nearby-road map, traffic and auto-drive follow the
+selected branch. This is one authored fork, rather than general city routing.
+
+Two original roadside parcels are validated against imported roads, buildings,
+water and chunk boundaries in `puneJourney.js`. The Pashan destination is now
+s=4905, beside the Pashan–Sus Road approach, rather than s=4935. The Baner stop
+is s=1519.25, about 40 m before its former end. Each has a ground-following
+marked bay and a small fictional chai shelter. Pavement walls, roadside props
+and vegetation leave the parking approach clear. Neither stop is a surveyed
+business or a lake entrance.
+
+Arrival requires the earlier objectives, earned distance into the final 70 m
+approach, and a continuous two-second stop below 0.5 m/s in the usable bay.
+Passing through cannot complete the drive. Auto-drive eases into the bay and
+stops; manual drivers receive pull-in guidance. Free roam remains available.
+Completed stops offer downloadable PNG postcards. Journal entries and collected
+postcard IDs persist locally under `wanderlane.discovery.v1`; image files are
+saved only when downloaded. Blocked or damaged storage permits a visit journal.
+
+Residential frontages favour entrances, slatted gates, planted ledges, shutters
+and balconies; main road classes retain more retail frontages. Building and shop
+details are fictional additions on imported geometry. Low quality omits the
+extra shutter and balcony detail.
+
+`npm run test:pune:journey` checks route connectivity and directions, anchor
+mapping, parking clearance, stop semantics and journal storage.
+`npm run test:pune:journey:browser` drives both Pashan branches and Baner through
+the real loop, checks parking, postcards and reload persistence, and saves
+screenshots and a report in `tests/journey-evidence/`.
 
 The trip controller has no timers, DOM nodes or scene references. It rejects
 implausible nearest-route jumps, off-route shortcuts and backwards credit.
 An objective needs both earned distance and physical proximity. Returning to
 the road preserves earned progress. A missed checkpoint must be approached
-again; this pilot does not calculate alternate routes.
+again; alternate progress is supported only on the authored fork.

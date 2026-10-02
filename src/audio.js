@@ -1,10 +1,13 @@
-// Restrained original Web Audio synthesis. No external sound files.
+import { DriveRadio } from "./driveRadio.js";
+// Original Web Audio synthesis. No external sound files.
 export class AudioSystem {
   constructor() {
     this.master = 0.55;
     this.engine = 0.6;
     this.ambience = 0.5;
     this.muted = false;
+    this.music = 0.45;
+    this.musicMood = "off";
     this.status = "Sound ready";
   }
   async start() {
@@ -25,6 +28,12 @@ export class AudioSystem {
         this.motorGain = c.createGain();
         this.motor.connect(this.motorGain).connect(this.gain);
         this.motor.start();
+        this.motorBody = c.createOscillator();
+        this.motorBody.type = "triangle";
+        this.motorBodyGain = c.createGain();
+        this.motorBodyGain.gain.value = 0;
+        this.motorBody.connect(this.motorBodyGain).connect(this.gain);
+        this.motorBody.start();
         const buffer = c.createBuffer(1, c.sampleRate * 2, c.sampleRate),
           data = buffer.getChannelData(0);
         let last = 0;
@@ -43,6 +52,15 @@ export class AudioSystem {
           .connect(this.noiseGain)
           .connect(this.gain);
         this.noise.start();
+        this.windFilter = c.createBiquadFilter();
+        this.windFilter.type = "lowpass";
+        this.windGain = c.createGain();
+        this.windGain.gain.value = 0;
+        this.noise
+          .connect(this.windFilter)
+          .connect(this.windGain)
+          .connect(this.gain);
+        this.radio = new DriveRadio(c, this.gain);
         this.ambient = c.createOscillator();
         this.ambient.type = "sine";
         this.ambientGain = c.createGain();
@@ -70,6 +88,11 @@ export class AudioSystem {
         });
         this.nodes = [
           this.gain,
+          this.motorBody,
+          this.motorBodyGain,
+          this.windFilter,
+          this.windGain,
+          ...this.radio.nodes,
           this.motor,
           this.motorGain,
           this.noise,
@@ -96,12 +119,23 @@ export class AudioSystem {
     const t = this.ctx.currentTime,
       ramp = (param, value) => param.setTargetAtTime(value, t, 0.12);
     ramp(this.gain.gain, this.muted || paused ? 0 : this.master);
+    this.radio.update(this.musicMood, this.music, !paused && !this.muted);
     ramp(this.motor.frequency, 38 + Math.abs(v.speed) * 2.7 + v.throttle * 12);
+    ramp(
+      this.motorBody.frequency,
+      76 + Math.abs(v.speed) * 5.4 + v.throttle * 24,
+    );
+    ramp(this.motorBodyGain.gain, this.engine * (0.018 + v.throttle * 0.045));
     ramp(this.motorGain.gain, this.engine * (0.08 + v.throttle * 0.22));
     ramp(this.filter.frequency, 180 + Math.abs(v.speed) * 24);
+    ramp(this.windFilter.frequency, 350 + Math.abs(v.speed) * 18);
+    ramp(
+      this.windGain.gain,
+      this.ambience * Math.min(0.22, (Math.abs(v.speed) / 30) ** 2 * 0.12),
+    );
     ramp(
       this.noiseGain.gain,
-      (0.035 + Math.abs(v.speed) * 0.005) *
+      Math.min(0.25, Math.abs(v.speed) * 0.005) *
         (v.surface === "Asphalt" ? 1 : 1.25) *
         this.ambience,
     );

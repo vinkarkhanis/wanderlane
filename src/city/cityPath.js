@@ -35,6 +35,8 @@ export class CityPath {
         y1: e.dir === 1 ? r.y1 : r.y0,
         s: distance,
         dir: e.dir,
+        canonicalS: e.canonicalS ?? distance,
+        canonicalLength: e.canonicalLength ?? r.length,
       };
       this.segments.push(seg);
       this.routeGrid.insert(seg, [
@@ -46,6 +48,8 @@ export class CityPath {
       distance += r.length;
     }
     this.length = distance;
+    this.canonicalLength = nav.canonicalLength ?? distance;
+    this.journeyChoice = nav.journeyChoice ?? "main";
     const neighbors = new Map();
     for (const r of this.roads)
       for (const [a, b] of [
@@ -102,6 +106,21 @@ export class CityPath {
       else hi = mid;
     }
     return this.segments[lo];
+  }
+  canonicalDistance(s) {
+    const r = this.segment(s);
+    return (
+      r.canonicalS +
+      ((mod(s, this.length) - r.s) / r.length) * r.canonicalLength
+    );
+  }
+  journeyDistance(s) {
+    s = mod(s, this.canonicalLength);
+    const r =
+      this.segments.find(
+        (r) => s >= r.canonicalS && s < r.canonicalS + r.canonicalLength,
+      ) ?? this.segments[0];
+    return r.s + ((s - r.canonicalS) / r.canonicalLength) * r.length;
   }
   sampleRoad(r, t, out = {}) {
     const dx = r.q[0] - r.p[0],

@@ -14,6 +14,12 @@ import { cityStreetBays, renderBenchmark } from "./puneBenchmark.js";
 import { benchmarkMaterials } from "./puneSurfaceMaterials.js";
 import { frontagePlan } from "./puneFrontagePlan.js";
 import { frontageMaterials, renderFrontages } from "./puneFrontages.js";
+import {
+  renderJourneyPlaces,
+  JOURNEY_PLACES,
+  bayContains,
+  clearParkingApproach,
+} from "./puneJourney.js";
 export const SEASONS = ["Summer", "Monsoon", "Winter"];
 const colors = {
   Summer: [0x9b9566, 0xa5ae74, 0x414548],
@@ -368,6 +374,28 @@ export class CityWorld {
       g.translate(x, y, z);
       add(g, m);
     };
+    const journeyPlaces = renderJourneyPlaces(
+      data,
+      this.path,
+      (x, z) => this.terrainHeight(data, x, z) - 0.22,
+      block,
+      {
+        ...this.res,
+        ...this.actors.res,
+        mark: this.res.line,
+        trim: this.res.trim,
+      },
+    );
+    for (const p of journeyPlaces) {
+      const g = new THREE.PlaneGeometry(3.45, 0.65),
+        uv = g.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setY(i, (4 + uv.getY(i)) / 6);
+      const x = p.x + Math.sin(p.yaw) * 3.0,
+        z = p.z + Math.cos(p.yaw) * 3.0;
+      g.rotateY(p.yaw + Math.PI);
+      g.translate(x, this.terrainHeight(data, x, z) - 0.22 + 2.38, z);
+      add(g, this.frontageMaterials.sign);
+    }
     const junctions = new Set();
     for (const id of data.roads) {
       const r = this.path.roads[id];
@@ -712,6 +740,9 @@ export class CityWorld {
       if (bays.some((p) => Math.hypot(p.x - x, p.z - z) < 7)) return false;
       if (STREET_SCENES.some((p) => Math.hypot(p.x - x, p.z - z) < 10))
         return false;
+      if (Object.values(JOURNEY_PLACES).some((p) => bayContains(p, x, z, 3)))
+        return false;
+      if (!clearParkingApproach(this.path, x, z, 4)) return false;
       if (edges.some((p) => Math.hypot(p.x - x, p.z - z) < p.radius + 4))
         return false;
       if (details.some((p) => Math.hypot(p.x - x, p.z - z) < p.radius + 4))
@@ -831,6 +862,7 @@ export class CityWorld {
       styles,
       rooftopFittings,
       frontages,
+      journeyPlaces,
       pavementBays: bays.length,
       edges,
       details,
@@ -943,6 +975,9 @@ export class CityWorld {
       vegetation,
       details,
       signs,
+      journeyPlaces: [...this.chunks.values()].flatMap((c) =>
+        c.journeyPlaces.map((p) => p.id),
+      ),
       pending: this.pending.size,
       queued: this.queue.length,
       error: this.error,

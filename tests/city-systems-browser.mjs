@@ -130,7 +130,7 @@ try {
   assert.equal(new Set(report.initial.map((c) => c.type)).size, 4);
   for (const c of report.initial) {
     assert.equal(c.junction, false);
-    assert.ok(c.distance >= 85);
+    assert.ok(c.distance >= 42);
   }
   for (let i = 0; i < report.initial.length; i++)
     for (let j = i + 1; j < report.initial.length; j++)
@@ -179,9 +179,9 @@ try {
     return counts;
   });
   assert.deepEqual(report.budgets, {
-    Low: [0, 4, 8],
-    Medium: [0, 5, 11],
-    High: [0, 6, 14],
+    Low: [0, 6, 12],
+    Medium: [0, 9, 20],
+    High: [0, 12, 28],
   });
   report.dispose = await page.evaluate(() => {
     const f = window.cityFixture;

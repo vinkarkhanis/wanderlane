@@ -22,6 +22,8 @@ try {
     "monsoon-pashan",
   ]) {
     if (id !== "free-roam") {
+      if (await page.locator("#cityTrip.trip-compact").count())
+        await page.click("#tripDetails");
       if (await page.locator("#tripCancel").isVisible())
         await page.click("#tripCancel");
       await page.selectOption("#discoveryDrive", id);

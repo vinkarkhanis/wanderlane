@@ -13,6 +13,18 @@ export function frontageMaterials() {
     teal: mat(0x38776e),
     cream: mat(0xe4d5ac),
     shutter: mat(0x7b8b87),
+    leaf: mat(0x597c55),
+    interior: new THREE.MeshStandardMaterial({
+      color: 0xb9a47b,
+      emissive: 0xd5ad65,
+      emissiveIntensity: 0.22,
+      roughness: 0.9,
+    }),
+    lamp: new THREE.MeshStandardMaterial({
+      color: 0xffe6ac,
+      emissive: 0xffd48a,
+      emissiveIntensity: 0.8,
+    }),
   };
   const labels = [
     ["सह्याद्री किराणा", "SAHYADRI GROCERS"],
@@ -42,16 +54,19 @@ export function frontageMaterials() {
     c.strokeRect(9, y + 7, 1006, 114);
     c.fillStyle = "#f8e8bd";
     c.textAlign = "center";
-    c.font = 'bold 49px "Nirmala UI", sans-serif';
-    c.fillText(mr, 512, y + 59);
-    c.font = "22px Arial";
-    c.fillText(en, 512, y + 96);
+    c.font = 'bold 64px "Nirmala UI", sans-serif';
+    c.fillText(mr, 512, y + 67, 950);
+    c.font = "bold 26px Arial";
+    c.fillText(en, 512, y + 106, 950);
   });
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
   materials.sign = new THREE.MeshStandardMaterial({
     map: texture,
+    emissiveMap: texture,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.35,
     roughness: 0.9,
     side: THREE.DoubleSide,
   });
@@ -79,29 +94,40 @@ export function renderFrontages(plan, quality, block, add, shared, res) {
     for (let i = 0; i < count; i++) {
       const u = -p.width / 2 + bay * (i + 0.5);
       if (p.retail) {
-        b(
-          u,
-          1.35,
-          0.22,
-          bay - 0.4,
-          2.3,
-          0.12,
-          i % 3 === 2 ? res.shutter : res.glass,
-        );
-        for (let r = 0; r < 8; r++)
-          if (i % 3 === 2)
-            b(u, 0.4 + r * 0.25, 0.3, bay - 0.45, 0.025, 0.03, res.frame);
+        b(u, 1.35, 0.22, bay - 0.4, 2.3, 0.12, res.interior);
+        // Open retail display: a raised shutter, stocked shelves and a low
+        // side counter instead of a full-height dark pane or closed shutter.
+        b(u, 2.64, 0.35, bay - 0.4, 0.2, 0.2, res.shutter);
+        b(u, 2.43, 0.52, bay * 0.65, 0.07, 0.12, res.lamp);
+        for (const shelfY of [0.8, 1.5]) {
+          b(u + bay * 0.16, shelfY, 0.42, bay * 0.44, 0.07, 0.24, res.frame);
+          for (let j = 0; j < 3; j++)
+            b(
+              u + bay * (0.02 + j * 0.13),
+              shelfY + 0.17,
+              0.43,
+              bay * 0.08,
+              0.26,
+              0.16,
+              j % 2 ? res.terracotta : res.cream,
+            );
+        }
+        b(u + bay * 0.18, 0.43, 0.74, bay * 0.42, 0.86, 0.48, accent);
+        b(u + bay * 0.18, 0.9, 0.74, bay * 0.45, 0.08, 0.54, res.cream);
+        b(u - bay * 0.28, 1.2, 0.3, bay * 0.23, 2, 0.035, res.glass);
         b(u - bay * 0.43, 1.4, 0.3, 0.12, 2.65, 0.18, res.frame);
-        b(u, 1.4, 0.3, 0.07, 2.45, 0.12, res.frame);
         b(u, 3.1, 0.68, bay - 0.08, 0.16, 1.28, accent);
         b(u, 2.96, 1.24, bay - 0.08, 0.28, 0.08, accent);
+        // Mount the fascia at the awning lip, within the cleared 1.3m apron.
+        // A sign against the wall disappears behind the canopy from a car.
+        b(u, 3.61, 1.17, bay - 0.12, 0.98, 0.18, res.frame);
         sign(
           p,
           u,
-          2.63,
-          0.34,
-          bay - 0.35,
-          0.56,
+          3.61,
+          1.275,
+          bay - 0.24,
+          0.86,
           (p.seed + i) % 4,
           add,
           res.sign,
@@ -122,6 +148,30 @@ export function renderFrontages(plan, quality, block, add, shared, res) {
             add,
             res.sign,
           );
+        // Distinct residential bays: timber shutters, narrow planted ledges,
+        // and a low slatted gate. All additions stay in the cleared frontage.
+        if (quality !== "Low") {
+          for (const side of [-1, 1]) {
+            b(u + side * 0.87, 1.55, 0.38, 0.24, 1.35, 0.08, accent);
+            for (let h = 1; h <= 2; h += 0.25)
+              b(u + side * 0.87, h, 0.44, 0.23, 0.04, 0.03, res.frame);
+          }
+          if (bay > 3.8) {
+            b(u + bay * 0.33, 0.34, 0.66, 0.55, 0.65, 0.55, res.terracotta);
+            b(u + bay * 0.33, 0.84, 0.66, 0.65, 0.55, 0.65, res.leaf);
+          }
+        }
+        if (p.apron > 1.2 && i > 0)
+          for (let dx = -bay / 2 + 0.25; dx < bay / 2 - 0.25; dx += 0.3)
+            b(
+              u + dx,
+              0.55,
+              Math.min(p.apron - 0.2, 2),
+              0.07,
+              1.1,
+              0.08,
+              res.frame,
+            );
       }
     }
     // Restrained cornices and vertical piers provide relief visible from a car.
@@ -132,6 +182,24 @@ export function renderFrontages(plan, quality, block, add, shared, res) {
     for (let floor = 1; floor <= floors; floor++) {
       if (floor * 3.1 + 0.2 >= p.height) break;
       b(0, floor * 3.1, 0.12, p.width, 0.16, 0.24, body);
+      if (!p.retail && floor > 1 && quality !== "Low") {
+        for (let u = -p.width / 2 + 2; u < p.width / 2 - 1; u += 4.5) {
+          b(u, floor * 3.1 + 0.2, 0.66, 2.6, 0.14, 1.2, body);
+          b(u, floor * 3.1 + 0.65, 1.2, 2.6, 0.8, 0.06, accent);
+          if ((p.seed + floor) % 3 === 0) {
+            b(
+              u + 0.8,
+              floor * 3.1 + 0.82,
+              0.9,
+              0.45,
+              0.3,
+              0.35,
+              res.terracotta,
+            );
+            b(u + 0.8, floor * 3.1 + 1.07, 0.9, 0.5, 0.25, 0.4, res.leaf);
+          }
+        }
+      }
     }
     for (const u of [-p.width / 2 + 0.12, p.width / 2 - 0.12])
       b(
