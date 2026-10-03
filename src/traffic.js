@@ -105,7 +105,11 @@ export class Traffic {
         if (gap > 0) target = Math.min(target, Math.max(0, (gap - 7) / 1.8));
       }
       const pgap = (player.near.distance - c.s) * c.direction;
-      if (Math.abs(player.near.offset - c.lane) < 2.1 && pgap > 0)
+      if (
+        (!player.flight || player.flight === "ground") &&
+        Math.abs(player.near.offset - c.lane) < 2.1 &&
+        pgap > 0
+      )
         target = Math.min(target, Math.max(0, (pgap - 9) / 1.8));
       const old = c.speed;
       c.speed = damp(c.speed, target, target < c.speed ? 3 : 0.5, dt);

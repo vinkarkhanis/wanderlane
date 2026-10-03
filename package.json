@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:flight": "node --test tests/flight.test.js",
+    "test:flight:browser": "node tests/flight-browser.mjs",
     "test:pune:journey": "node --test tests/pune-journey.test.mjs",
     "test:pune:journey:browser": "node tests/pune-journey-browser.mjs",
     "test:real-pune": "node --test tests/real-pune.test.mjs tests/benchmark.test.mjs tests/pune-frontages.test.mjs tests/all-mode-streets.test.mjs tests/pune-scenes.test.mjs tests/neighbourhood.test.mjs",

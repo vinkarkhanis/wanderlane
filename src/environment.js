@@ -176,7 +176,13 @@ export class Environment {
     this.scene.fog.color.copy(this.skyU.bottom.value);
     this.scene.fog.far = damp(
       this.scene.fog.far,
-      this.mode === 3 ? 410 : this.mode === 0 ? 500 : 650,
+      v.flight && v.flight !== "ground"
+        ? 440
+        : this.mode === 3
+          ? 410
+          : this.mode === 0
+            ? 500
+            : 650,
       1.25,
       dt,
     );

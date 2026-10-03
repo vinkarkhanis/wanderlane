@@ -61,7 +61,11 @@ export class TrafficCollisions {
     for (const [key, until] of this.cooldowns)
       if (until < this.time) this.cooldowns.delete(key);
     const entries = [];
-    if (Number.isFinite(player.x) && Number.isFinite(player.heading))
+    if (
+      (player.flight === undefined || player.flight === "ground") &&
+      Number.isFinite(player.x) &&
+      Number.isFinite(player.heading)
+    )
       entries.push({
         v: player,
         player: true,

@@ -44,6 +44,7 @@ export class VehiclePose {
         return before + (height - before) * alpha;
       }) ?? null;
     out.auto = vehicle.auto;
+    out.flight = vehicle.flight;
     return out;
   }
 }

@@ -1,5 +1,6 @@
 import { PHYS, ROAD, damp, clamp, angleDelta } from "./config.js";
 import { terrainHeight } from "./heightfield.js";
+import { resetFlight, toggleFlight, stepFlight } from "./flight.js";
 import { clearImpact, integrateImpact } from "./vehicleCollisions.js";
 // Bicycle steering with a smooth speed curve and a tyre lateral-force budget.
 export function steeringAngle(speed) {
@@ -87,6 +88,7 @@ export class Vehicle {
     this.reset(40, 0);
   }
   reset(distance = this.near.distance, offset = this.lane) {
+    resetFlight(this);
     clearImpact(this);
     const p = this.path.getLanePosition(distance, offset, this.near);
     this.x = p.x;
@@ -111,7 +113,14 @@ export class Vehicle {
     for (let i = 0; i < steps; i++)
       this.step(elapsed / steps, input, auto, biome, traffic);
   }
+  toggleFlight() {
+    toggleFlight(this);
+  }
   step(dt, input, auto, biome, traffic) {
+    if (this.flight !== "ground") {
+      stepFlight(this, dt, input, biome, traffic);
+      return;
+    }
     const p = this.path.findNearestRoadPoint(this.x, this.z, this.near, this.y),
       off = p.surfaceDistance ?? Math.abs(p.offset);
     this.surface =

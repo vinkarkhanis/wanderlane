@@ -119,6 +119,9 @@ export class CityWorld {
     this.season = season;
     this.quality = quality;
     this.chunks = new Map();
+    path.flightFloor = (x, z) => this.flightFloor(x, z);
+    path.flightLandingReady = (t) =>
+      this.chunks.has(Math.floor(t.x / 256) + "," + Math.floor(t.z / 256));
     this.pending = new Map();
     this.queue = [];
     this.wanted = new Set();
@@ -273,11 +276,23 @@ export class CityWorld {
       0.15 + Math.max(night, sunset ? 0.25 : 0) * 3;
     const cx = Math.floor(v.x / 256),
       cz = Math.floor(v.z / 256),
-      key = cx + "," + cz;
+      key =
+        cx +
+        "," +
+        cz +
+        ":" +
+        (v.flight && v.flight !== "ground" ? "air" : "road");
     if (key !== this.lastCell) {
       this.lastCell = key;
       this.wanted.clear();
-      const radius = this.quality === "Low" ? 1 : 2;
+      const radius =
+        v.flight && v.flight !== "ground"
+          ? this.quality === "Low"
+            ? 2
+            : 3
+          : this.quality === "Low"
+            ? 1
+            : 2;
       const entries = this.manifest.chunks
         .filter(
           (e) =>
@@ -903,6 +918,19 @@ export class CityWorld {
         v.speed *= Math.exp(-8 * dt);
       }
     }
+  }
+  flightFloor(x, z) {
+    let floor = this.heightAt(x, z) + 45;
+    const c = this.chunks.get(Math.floor(x / 256) + "," + Math.floor(z / 256));
+    for (const b of c?.data.buildings || [])
+      if (
+        x > b.bounds[0] - 30 &&
+        x < b.bounds[2] + 30 &&
+        z > b.bounds[1] - 30 &&
+        z < b.bounds[3] + 30
+      )
+        floor = Math.max(floor, b.y + b.height + 12);
+    return floor;
   }
   remove(id) {
     const c = this.chunks.get(id);

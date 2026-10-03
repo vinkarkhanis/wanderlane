@@ -9,6 +9,7 @@ export class Controls {
       KeyR: "terrain",
       KeyC: "cam",
       KeyF: "cockpit",
+      KeyL: "flight",
       KeyV: "color",
       Space: "auto",
       KeyH: "return",
@@ -42,6 +43,7 @@ export class Controls {
       camBtn: "cam",
       colorBtn: "color",
       autoBtn: "auto",
+      flyBtn: "flight",
       returnBtn: "return",
       trafficBtn: "traffic",
       muteBtn: "mute",
@@ -112,6 +114,8 @@ export class Controls {
       left: k.KeyA || k.ArrowLeft || t.left,
       right: k.KeyD || k.ArrowRight || t.right,
       reverse: k.KeyB,
+      rise: k.KeyQ || t.rise,
+      descend: k.KeyE || t.descend,
     };
   }
 }

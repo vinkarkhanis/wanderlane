@@ -14,6 +14,7 @@ export class CameraRig {
     this.target = new THREE.Vector3();
     this.look = new THREE.Vector3();
     this.snap = true;
+    this.aerialMix = 0;
   }
   update(v, dt, reduced = false, car = null) {
     dt = Math.max(0, Math.min(dt, 0.1));
@@ -48,10 +49,12 @@ export class CameraRig {
       return;
     }
     this.cam.up.set(0, 1, 0);
+    const aerial = v.flight && v.flight !== "ground";
+    this.aerialMix = damp(this.aerialMix, aerial ? 1 : 0, 3, dt);
     const wide = this.mode === 2,
       hood = this.mode === 1,
-      back = wide ? 13 : 8.2,
-      up = wide ? 5.7 : 3.4,
+      back = (wide ? 13 : 8.2) + this.aerialMix * (wide ? 11 : 7.8),
+      up = (wide ? 5.7 : 3.4) + this.aerialMix * (wide ? 6.3 : 3.6),
       s = Math.sin(hood ? v.heading : this.heading),
       c = Math.cos(hood ? v.heading : this.heading);
     this.position.set(

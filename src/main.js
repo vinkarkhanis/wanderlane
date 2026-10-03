@@ -20,6 +20,7 @@ import * as THREE from "three";
 import { RoadPath } from "./roadPath.js";
 import { WorldManager } from "./worldManager.js";
 import { Vehicle } from "./vehicle.js";
+import { FlightView } from "./flightView.js";
 import { VehiclePose } from "./vehiclePose.js";
 import { Car } from "./car.js";
 import { CAMERA_MODES } from "./carGeometry.js";
@@ -75,6 +76,7 @@ let seed = String(saved.seed || "aster-2026"),
   reduced =
     !!saved.reduced || matchMedia("(prefers-reduced-motion: reduce)").matches;
 const car = new Car(scene, COLORS[0][1]);
+const flightView = new FlightView(scene, car);
 const tripUI = new CityTripUI(
   async () => {
     if (!experience || switching) return;
@@ -132,7 +134,14 @@ function makeWorld() {
 function updateWorld(immediate = false) {
   if (driveMode === "pune")
     world.update(vehicle, time, reduced, env.night, env.mode === 2);
-  else world.update(vehicle.near.distance, time, reduced, immediate);
+  else
+    world.update(
+      vehicle.near.distance,
+      time,
+      reduced,
+      immediate,
+      vehicle.flight !== "ground",
+    );
 }
 async function switchMode() {
   if (switching) return;
@@ -330,6 +339,13 @@ function updateLabels() {
   el("timeLabel").textContent = TIMES[env.mode].toUpperCase();
   el("autoBtn").textContent = auto ? "Auto drive" : "Manual";
   el("autoBtn").setAttribute("aria-pressed", auto);
+  el("flyBtn").textContent =
+    vehicle.flight === "ground"
+      ? "Fly"
+      : vehicle.flight === "landing"
+        ? "Cancel landing"
+        : "Land";
+  el("flyBtn").setAttribute("aria-pressed", vehicle.flight !== "ground");
   el("camBtn").textContent = CAMERA_MODES[rig.mode];
   el("trafficBtn").textContent =
     "Traffic " + TRAFFIC[traffic.mode].toLowerCase();
@@ -388,6 +404,10 @@ const controls = new Controls({
     updateLabels();
   },
   auto() {
+    if (vehicle.flight !== "ground") {
+      toast("Land on the road before enabling auto-drive.");
+      return;
+    }
     if (path.city && vehicle.near.routeGap > 35) {
       toast("Return near the Explorer route before enabling auto-drive.");
       return;
@@ -396,6 +416,19 @@ const controls = new Controls({
     updateLabels();
   },
   return: returnToRoad,
+  flight() {
+    if (!started || paused || switching) return;
+    auto = false;
+    controls.clear();
+    vehicle.toggleFlight();
+    updateWorld(true);
+    updateLabels();
+    toast(
+      vehicle.flight === "landing"
+        ? "Aligning with the road. L cancels landing."
+        : "Flight · WASD to move · Q / E for altitude · L to land",
+    );
+  },
   traffic() {
     traffic.setMode((traffic.mode + 1) % 3, vehicle);
     persist();
@@ -435,6 +468,9 @@ function usePuneRoute(choice) {
   );
   next.groundHeight = (x, z) => world.heightAt(x, z);
   next.resolveContacts = (v, dt) => world.constrain(v, dt);
+  next.flightFloor = (x, z) => world.flightFloor(x, z);
+  next.flightLandingReady = (t) =>
+    world.chunks.has(Math.floor(t.x / 256) + "," + Math.floor(t.z / 256));
   path = next;
   vehicle.path = path;
   vehicle.near.distance = path.journeyDistance(canonical);
@@ -496,7 +532,13 @@ function currentPostcard() {
   };
 }
 function canPostcard() {
-  if (!path.city || Math.abs(vehicle.speed) > 0.8 || paused) return false;
+  if (
+    !path.city ||
+    vehicle.flight !== "ground" ||
+    Math.abs(vehicle.speed) > 0.8 ||
+    paused
+  )
+    return false;
   const p = currentPostcard();
   return Math.hypot(vehicle.x - p.x, vehicle.z - p.z) < (p.radius ?? 25);
 }
@@ -640,9 +682,19 @@ function loop(now) {
     const input = controls.input;
     while (accumulator >= step) {
       presentation.capture(vehicle);
+      const wasAirborne = vehicle.flight !== "ground";
       vehicle.update(step, input, auto, biome, traffic);
+      if (wasAirborne && vehicle.flight === "ground") {
+        signals?.reset(vehicle.near.distance);
+        if (experience) {
+          experience.last = vehicle.near.distance;
+          experience.lastSpeed = 0;
+        }
+        toast("Landed. Ready to drive.");
+      }
       if (
         !auto &&
+        vehicle.flight === "ground" &&
         experience?.status === "active" &&
         path.city &&
         el("discoveryDrive").value !== "baner-evening" &&
@@ -662,8 +714,13 @@ function loop(now) {
         )
           usePuneRoute("main");
       }
-      const violations = signals?.update(step, vehicle) || 0;
-      experience?.update(step, vehicle, violations);
+      if (vehicle.flight === "ground") {
+        const violations = signals?.update(step, vehicle) || 0;
+        experience?.update(step, vehicle, violations);
+      } else if (signals) {
+        signals.time += step;
+        signals.reset(vehicle.near.distance);
+      }
       if (experience?.status === "completed" && auto) {
         auto = false;
         updateLabels();
@@ -681,6 +738,7 @@ function loop(now) {
     paused || rig.snap,
   );
   car.place(visual, reduced);
+  flightView.update(vehicle, time, reduced);
   car.update(paused ? 0 : dt, visual.speed, env.night, vehicle.braking);
   updateWorld();
   env.update(visual, dt, biome, time, reduced);
@@ -727,6 +785,22 @@ function loop(now) {
   );
   hudTime += dt;
   if (hudTime > 0.15) {
+    const airborne = vehicle.flight !== "ground";
+    el("flightTouch").hidden = !airborne || vehicle.flight === "landing";
+    el("flightStatus").hidden = !airborne;
+    el("flightStatus").textContent =
+      `${vehicle.flight === "landing" ? "Landing · aligning with road" : vehicle.flight === "takeoff" ? "Taking off" : "Flying"} · ${Math.round(vehicle.flightAltitude)} m · Q ↑ / E ↓ · L ${vehicle.flight === "landing" ? "cancel" : "land"}`;
+    el("flyBtn").textContent = !airborne
+      ? "Fly"
+      : vehicle.flight === "landing"
+        ? "Cancel landing"
+        : "Land";
+    el("flyBtn").setAttribute("aria-pressed", airborne);
+    el("driveStatus").textContent = airborne
+      ? "A different view. Take your time."
+      : auto
+        ? "Following the road. Enjoy the view."
+        : "A little further. A little quieter.";
     el("postcardBtn").hidden = !canPostcard();
     const entries = journal.snapshot;
     const journalText =
@@ -743,7 +817,7 @@ function loop(now) {
       el("journalEntries").textContent = journalText;
     tripUI.update(
       experience?.snapshot,
-      started && !paused && driveMode === "pune",
+      started && !paused && driveMode === "pune" && !airborne,
     );
     journeyMap.update(
       path,
@@ -819,6 +893,10 @@ window.wanderlane = {
         yawRate: vehicle.impactYaw || 0,
       },
       speed: vehicle.speed,
+      flight: vehicle.flight,
+      flightAltitude: vehicle.flightAltitude,
+      flightTarget: vehicle.flightTarget ? { ...vehicle.flightTarget } : null,
+      input: { ...controls.input },
       heading: vehicle.heading,
       distance: vehicle.dist,
       roadDistance: vehicle.near.distance,

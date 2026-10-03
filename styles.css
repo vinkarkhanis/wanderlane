@@ -414,6 +414,25 @@ summary {
 #touch {
   display: none;
 }
+#flightStatus {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  text-align: center;
+  width: max-content;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #183e40dc;
+  color: #f1f2dd;
+  font-size: 12px;
+  pointer-events: none;
+}
+#flightTouch[hidden],
+#flightStatus[hidden] {
+  display: none;
+}
 @media (any-pointer: coarse) {
   #touch {
     display: flex;
@@ -444,6 +463,17 @@ summary {
   .touch-group {
     display: flex;
     gap: 10px;
+  }
+  #flightTouch {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 104px;
+  }
+  #flightTouch button {
+    width: 58px;
+    height: 64px;
+    font-size: 23px;
   }
   #touch small {
     font-size: 10px;

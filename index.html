@@ -29,6 +29,8 @@
       ><button id="timeBtn" title="Change time (T)">Sunset</button
       ><button id="camBtn" title="Camera (C) / cockpit (F)">Chase</button
       ><button id="autoBtn" title="Auto drive (Space)">Manual</button
+      ><button id="flyBtn" title="Take off / land (L)" aria-pressed="false">
+        Fly</button
       ><button id="trafficBtn" title="Traffic (G)">Traffic off</button
       ><button id="colorBtn" title="Paint (V)">Lagoon</button
       ><button id="returnBtn" title="Return to Road (H)">Return to Road</button
@@ -45,6 +47,7 @@
       </div>
     </div>
     <div id="driveStatus">A little further. A little quieter.</div>
+    <div id="flightStatus" hidden role="status"></div>
     <div id="hint">W A S D to drive <span>·</span> SPACE to wander on auto</div>
     <div id="routeStatus" hidden></div>
     <a
@@ -133,6 +136,20 @@
         </button>
         <button data-key="accel" aria-label="Accelerate">
           <span>↑</span><small>Drive</small>
+        </button>
+      </div>
+      <div
+        id="flightTouch"
+        class="touch-group"
+        role="group"
+        aria-label="Flight altitude"
+        hidden
+      >
+        <button data-key="rise" aria-label="Rise">
+          <span>＋</span><small>Rise</small>
+        </button>
+        <button data-key="descend" aria-label="Descend">
+          <span>−</span><small>Lower</small>
         </button>
       </div>
     </div>
@@ -260,6 +277,11 @@
         </div>
         <details>
           <summary>Driving guide & keyboard controls</summary>
+          <p>
+            L take off / land · Q rise · E descend. WASD steers and controls
+            speed in flight. Landing aligns you with a nearby road; L cancels
+            landing. H returns immediately to the road.
+          </p>
           <p>
             W / ↑ accelerate · S / ↓ brake, then reverse · A D / ← → steer ·
             Hold B to reverse<br />Space auto-drive · C camera · F cockpit · R

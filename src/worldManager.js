@@ -14,6 +14,16 @@ export class WorldManager {
     this.biome = biome;
     this.quality = quality;
     this.chunks = new Map();
+    path.flightFloor = (x, z) => {
+      let floor = -Infinity;
+      for (const chunk of this.chunks.values())
+        for (const h of chunk.flightObstacles)
+          if (Math.abs(x - h[0]) < h[3] + 30 && Math.abs(z - h[2]) < h[5] + 30)
+            floor = Math.max(floor, h[1] + h[4] + 8);
+      return floor;
+    };
+    path.flightLandingReady = (t) =>
+      this.chunks.has(Math.floor(t.distance / ROAD.chunk));
     path.groundHeight = (x, z) => {
       const p = path.findNearestRoadPoint(x, z, {});
       return this.chunks
@@ -94,6 +104,7 @@ export class WorldManager {
       mesh.castShadow = shadow;
       mesh.userData.vegetationShadow = shadow;
       mesh.userData.groundcover = m === r.grass || m === r.flower;
+      if (m === r.distant) mesh.userData.flightObstacles = data;
       if (m === r.leaf) mesh.customDepthMaterial = r.leafDepth;
       mesh.receiveShadow = true;
       mesh.computeBoundingSphere();
@@ -125,6 +136,11 @@ export class WorldManager {
     scenery.add(settlement.group);
     group.add(road.group, terrain, scenery);
     this.scene.add(group);
+    const flightObstacles = [];
+    scenery.traverse((o) => {
+      if (o.userData.flightObstacles)
+        flightObstacles.push(...o.userData.flightObstacles);
+    });
     this.chunks.set(i, {
       group,
       road,
@@ -132,18 +148,26 @@ export class WorldManager {
       scenery,
       settlementPlan: town,
       settlement,
+      flightObstacles,
     });
   }
-  update(distance, time = 0, reduced = false, immediate = false) {
+  update(
+    distance,
+    time = 0,
+    reduced = false,
+    immediate = false,
+    flight = false,
+  ) {
     this.wind.value = reduced ? 0 : time;
     const center = Math.floor(distance / ROAD.chunk),
       needed = [];
-    for (let i = center - ROAD.behind; i <= center + ROAD.ahead; i++)
+    const behind = flight ? 4 : ROAD.behind;
+    for (let i = center - behind; i <= center + ROAD.ahead; i++)
       if (!this.chunks.has(i)) needed.push(i);
     needed.sort((a, b) => Math.abs(a - center) - Math.abs(b - center));
     for (const i of needed.slice(0, immediate ? 99 : 1)) this.build(i);
     for (const [i, c] of this.chunks) {
-      if (i < center - ROAD.behind || i > center + ROAD.ahead) this.remove(i);
+      if (i < center - behind || i > center + ROAD.ahead) this.remove(i);
       else
         c.scenery.traverse((o) => {
           if (o.isInstancedMesh) {

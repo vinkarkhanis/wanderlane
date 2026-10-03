@@ -304,6 +304,9 @@ export class CityPath {
     v.heading += delta * (1 - Math.exp(-2 * dt));
   }
   resetNearest(v) {
+    v.flight = "ground";
+    v.flightTarget = null;
+    v.flightAltitude = 0;
     clearImpact(v);
     const n = this.findNearestRoadPoint(v.x, v.z, {}, v.y),
       r = this.roads[n.roadId];

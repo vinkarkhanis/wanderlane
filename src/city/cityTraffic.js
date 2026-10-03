@@ -121,7 +121,11 @@ export class CityTraffic extends Traffic {
           );
       }
       const pg = delta(player.near.distance, c.s, this.path.length);
-      if (pg > 0 && player.near.routeGap < 8)
+      if (
+        (!player.flight || player.flight === "ground") &&
+        pg > 0 &&
+        player.near.routeGap < 8
+      )
         target = Math.min(target, Math.max(0, (pg - 10) / 2));
       const old = c.speed;
       c.speed = damp(
@@ -135,7 +139,11 @@ export class CityTraffic extends Traffic {
         c.speed * dt,
         this.signals?.stopDistance(c.s, c.car.bounds.halfLength) ?? Infinity,
       );
-      if (pg > 0 && player.near.routeGap < 8)
+      if (
+        (!player.flight || player.flight === "ground") &&
+        pg > 0 &&
+        player.near.routeGap < 8
+      )
         advance = Math.min(
           advance,
           Math.max(0, pg - c.car.bounds.halfLength - 4.3),
