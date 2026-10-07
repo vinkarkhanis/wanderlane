@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:traffic:visibility:browser": "node tests/traffic-visibility-browser.mjs",
+    "test:garage": "node --test tests/garage.test.js",
+    "test:garage:browser": "node tests/garage-browser.mjs",
     "test:flight": "node --test tests/flight.test.js",
     "test:flight:browser": "node tests/flight-browser.mjs",
     "test:pune:journey": "node --test tests/pune-journey.test.mjs",

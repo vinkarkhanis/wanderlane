@@ -5,6 +5,7 @@ import { vegetationResources, addGroundDetail } from "../vegetation.js";
 import { detailCandidates, tileDetails } from "./cityDetails.js";
 import { CitySignalView } from "./citySignalView.js";
 import { CityActors } from "./cityActors.js";
+import { ChaiStopView } from "./chaiStopView.js";
 import { STREET_SCENES } from "./puneStreetDetails.js";
 import { buildingStyle, markingRanges } from "./puneStyle.js";
 import { buildingMaterials, dressBuilding } from "./puneBuildings.js";
@@ -135,6 +136,7 @@ export class CityWorld {
     this.junctionNodes = junctionNodes(path);
     this.signalView = new CitySignalView(path);
     this.actors = new CityActors(path, quality);
+    this.chaiStops = new ChaiStopView(quality);
     this.resources();
   }
   resources() {
@@ -260,6 +262,7 @@ export class CityWorld {
     if (this.error) throw Error(this.error);
   }
   update(v, time = 0, reduced = false, night = 0, sunset = false) {
+    this.chaiStops.update(v, time, reduced, Math.max(night, sunset ? 0.35 : 0));
     this.signalView.update(this.signals?.time ?? time);
     this.actors.update(
       v,
@@ -402,7 +405,7 @@ export class CityWorld {
       },
     );
     for (const p of journeyPlaces) {
-      const g = new THREE.PlaneGeometry(3.45, 0.65),
+      const g = new THREE.PlaneGeometry(3.45, 0.45),
         uv = g.attributes.uv;
       for (let i = 0; i < uv.count; i++) uv.setY(i, (4 + uv.getY(i)) / 6);
       const x = p.x + Math.sin(p.yaw) * 3.0,
@@ -411,6 +414,12 @@ export class CityWorld {
       g.translate(x, this.terrainHeight(data, x, z) - 0.22 + 2.38, z);
       add(g, this.frontageMaterials.sign);
     }
+    this.chaiStops.addChunk(
+      data.id,
+      journeyPlaces,
+      group,
+      (x, z) => this.terrainHeight(data, x, z) - 0.22,
+    );
     const junctions = new Set();
     for (const id of data.roads) {
       const r = this.path.roads[id];
@@ -937,6 +946,7 @@ export class CityWorld {
     c.group.removeFromParent();
     c.releaseSignals();
     c.releaseActors();
+    this.chaiStops.remove(id);
     for (const g of c.geometries) g.dispose();
     for (const resource of c.owned) resource.dispose();
     c.group.traverse((o) => {
@@ -949,6 +959,7 @@ export class CityWorld {
     this.controller.abort();
     this.signalView.dispose();
     this.actors.dispose();
+    this.chaiStops.dispose();
     for (const id of [...this.chunks.keys()]) this.remove(id);
     for (const v of Object.values(this.res)) v?.dispose?.();
     for (const m of this.facades) m.dispose();

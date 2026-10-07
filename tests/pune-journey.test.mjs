@@ -99,14 +99,19 @@ test("arrival needs earned approach, a continuous low-speed stop, and resets on 
   e.highWater = d.distance - 50;
   e.update(1, { ...parked, speed: 4 });
   assert.equal(e.arrivalDwell, 0);
+  assert.equal(e.snapshot.arrival.stage, "parking");
   e.update(1, parked);
   assert.equal(e.arrivalDwell, 1);
+  assert.equal(e.snapshot.arrival.stage, "settling");
+  assert.equal(e.snapshot.direction, "stop");
   e.update(0.1, { ...parked, x: parked.x + 20 });
   assert.equal(e.arrivalDwell, 0);
   for (let i = 0; i < 21; i++) e.update(0.1, parked);
   assert.equal(e.status, "completed");
+  assert.equal(e.snapshot.arrival.stage, "arrived");
   e.start();
   assert.equal(e.arrivalDwell, 0);
+  assert.equal(e.snapshot.arrival.stage, "driving");
 });
 
 test("journal persists discoveries, rejects damaged data, and works without storage", () => {

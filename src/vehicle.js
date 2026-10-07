@@ -2,10 +2,12 @@ import { PHYS, ROAD, damp, clamp, angleDelta } from "./config.js";
 import { terrainHeight } from "./heightfield.js";
 import { resetFlight, toggleFlight, stepFlight } from "./flight.js";
 import { clearImpact, integrateImpact } from "./vehicleCollisions.js";
+import { vehicleSpec } from "./vehicleCatalog.js";
 // Bicycle steering with a smooth speed curve and a tyre lateral-force budget.
-export function steeringAngle(speed) {
+export function steeringAngle(speed, physics = PHYS) {
   return (
-    PHYS.steeringAngle / (1 + (Math.abs(speed) / PHYS.steeringSpeed) ** 1.35)
+    physics.steeringAngle /
+    (1 + (Math.abs(speed) / physics.steeringSpeed) ** 1.35)
   );
 }
 export function contactHeight(path, x, z, biome, height) {
@@ -75,8 +77,9 @@ export function contactHeight(path, x, z, biome, height) {
   );
 }
 export class Vehicle {
-  constructor(path) {
+  constructor(path, model = "gt") {
     this.path = path;
+    this.setModel(model);
     this.speed = 0;
     this.steer = 0;
     this.dist = 0;
@@ -86,6 +89,17 @@ export class Vehicle {
     this.near = {};
     this.target = {};
     this.reset(40, 0);
+  }
+  setModel(id) {
+    this.spec = vehicleSpec(id);
+    this.bounds = this.spec.bounds;
+    this.mass = this.spec.mass;
+    this.wheelHeights = null;
+    this.speed = 0;
+    this.steer = 0;
+    this.throttle = 0;
+    this.wheelAngle = 0;
+    clearImpact(this);
   }
   reset(distance = this.near.distance, offset = this.lane) {
     resetFlight(this);
@@ -117,6 +131,7 @@ export class Vehicle {
     toggleFlight(this);
   }
   step(dt, input, auto, biome, traffic) {
+    const PHYS = this.spec.physics;
     if (this.flight !== "ground") {
       stepFlight(this, dt, input, biome, traffic);
       return;
@@ -224,7 +239,7 @@ export class Vehicle {
         ? this.path.city
           ? 0.75
           : 0.42
-        : steeringAngle(this.speed));
+        : steeringAngle(this.speed, PHYS));
     const yaw =
       (this.speed / PHYS.wheelbase) * Math.tan(this.wheelAngle) * grip;
     const yawLimit = Math.min(

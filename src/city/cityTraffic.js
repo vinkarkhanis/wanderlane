@@ -32,6 +32,7 @@ export class CityTraffic extends Traffic {
       this.spawn(this.cars[i], player, i * 19);
   }
   spawn(c, player, extra = 0) {
+    c.recycleDelay = 0;
     resetTrafficImpact(c);
     c.direction = 1;
     c.lane = -1.6;
@@ -162,7 +163,10 @@ export class CityTraffic extends Traffic {
       }
       c.s += advance;
       if (advance < c.speed * dt) c.speed = advance / dt;
-      if (Math.abs(delta(c.s, player.near.distance, this.path.length)) > 500)
+      const outsideRoute =
+        Math.abs(delta(c.s, player.near.distance, this.path.length)) > 500;
+      if (!outsideRoute) c.recycleDelay = 0;
+      if (outsideRoute && this.view.canRecycle(c, player, dt))
         this.spawn(c, player, this.cars.indexOf(c) * 65);
       if (c.waiting) continue;
       this.place(c, dt, night);

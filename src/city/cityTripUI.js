@@ -37,6 +37,31 @@ export class CityTripUI {
     };
     const active = s.status === "active",
       done = s.status === "completed";
+    const arrival = active && s.arrival && s.finalObjective && s.remaining < 70;
+    this.panel.dataset.status = s.status;
+    text(
+      "tripDirection",
+      done
+        ? "✓"
+        : arrival
+          ? s.arrival.stage === "approach" || s.arrival.stage === "driving"
+            ? "↰"
+            : "P"
+          : ({ left: "↰", right: "↱", straight: "↑" }[s.direction] ?? "↑"),
+    );
+    document.getElementById("tripArrival").hidden = !arrival;
+    if (arrival) {
+      const settling = s.arrival.stage === "settling";
+      text(
+        "tripArrivalHint",
+        settling
+          ? `Stay still · ${Math.max(0, 2 - s.arrival.dwell).toFixed(1)} s`
+          : s.arrival.stage === "parking"
+            ? "Brake gently and come to a stop"
+            : "Look for the P sign · pull into the bay on the left",
+      );
+      document.getElementById("tripArrivalProgress").value = s.arrival.dwell;
+    }
     if (active !== this.active) {
       this.active = active;
       this.panel.classList.toggle("trip-compact", active);
@@ -45,7 +70,7 @@ export class CityTripUI {
       this.details.textContent = "Journey details";
     }
     text("tripTitle", s.name);
-    document.getElementById("discoveryChoice").hidden = active;
+    document.getElementById("discoveryChoice").hidden = active || done;
     text(
       "tripEyebrow",
       done
@@ -65,7 +90,7 @@ export class CityTripUI {
     text(
       "tripGuidance",
       done
-        ? `${Math.floor(s.elapsed / 60)}m ${Math.floor(s.elapsed % 60)}s · ${s.quality}`
+        ? "Chai is ready. Save a postcard of your stop."
         : active
           ? s.guidance || `Continue on ${s.road || "the local road"}`
           : `${(s.distance / 1000).toFixed(1)} km · Manual or auto-drive`,
@@ -73,11 +98,11 @@ export class CityTripUI {
     text(
       "tripSecondary",
       done
-        ? s.reason
+        ? `${Math.floor(s.elapsed / 60)}m ${Math.floor(s.elapsed % 60)}s · ${s.quality} · ${s.reason}`
         : active
-          ? s.arrival && s.finalObjective && s.remaining < 70
-            ? `Marked bay · stop for 2 seconds${s.arrival.dwell > 0 ? " · settling in…" : ""}`
-            : `${s.finalObjective ? "Destination" : "Checkpoint"} in ${s.nextDistance >= 1000 ? (s.nextDistance / 1000).toFixed(1) + " km" : Math.round(s.nextDistance) + " m"} · Destination ${(s.remaining / 1000).toFixed(1)} km`
+          ? arrival
+            ? "Your chai stop · park here for 2 seconds"
+            : `Chai stop · ${s.remaining >= 1000 ? (s.remaining / 1000).toFixed(1) + " km" : Math.round(s.remaining) + " m"} remaining`
           : "Follow the road. Take the long way.",
     );
     text("tripMarathi", active ? s.marathi : "");

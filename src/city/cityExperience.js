@@ -2,7 +2,7 @@ import { roadName } from "./cityDetails.js";
 import {
   JOURNEY_PLACES,
   bayContains,
-  turnGuidance,
+  turnInstruction,
   streetCharacter,
 } from "./puneJourney.js";
 
@@ -110,6 +110,8 @@ export class CityExperience {
     this.arrivalDwell = 0;
     this.arrivalDistance = Infinity;
     this.guidance = "";
+    this.direction = "straight";
+    this.arrivalStage = "driving";
     this.character = "residential";
   }
   start() {
@@ -158,13 +160,26 @@ export class CityExperience {
     this.accelLatch = hardAcceleration;
     this.lastSpeed = v.speed;
     this.redLightViolations += violations;
+    const turn = this.path.segments
+      ? turnInstruction(this.path, v.near.distance)
+      : null;
+    this.direction = inApproach
+      ? atBay
+        ? "stop"
+        : "left"
+      : (turn?.direction ?? "straight");
+    this.arrivalStage = atBay
+      ? Math.abs(v.speed) < 0.5
+        ? "settling"
+        : "parking"
+      : inApproach
+        ? "approach"
+        : "driving";
     this.guidance = inApproach
       ? atBay
         ? "Stop here and take a moment"
         : "Pull into the marked bay on the left"
-      : this.path.segments
-        ? turnGuidance(this.path, v.near.distance)
-        : "";
+      : (turn?.text ?? "");
     this.character = streetCharacter(this.path.segment(v.near.distance));
     if (approaching) {
       this.arrivalDwell =
@@ -172,6 +187,7 @@ export class CityExperience {
       if (this.arrivalDwell >= 2) {
         this.objectiveIndex++;
         this.status = "completed";
+        this.arrivalStage = "arrived";
         this.journal?.complete(this.snapshot);
         return;
       }
@@ -289,12 +305,14 @@ export class CityExperience {
       marathi: this.marathi,
       district: o?.district ?? d.objectives.at(-1)?.district ?? "Pune",
       guidance: this.guidance,
+      direction: this.direction,
       character: this.character,
       arrival: d.arrival
         ? {
             ...d.arrival,
             distance: this.arrivalDistance,
             dwell: this.arrivalDwell,
+            stage: this.arrivalStage,
           }
         : null,
       routeChoice: this.path.journeyChoice ?? "main",

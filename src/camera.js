@@ -38,10 +38,11 @@ export class CameraRig {
     if (cockpit && car) {
       car.body.updateWorldMatrix(true, false);
       this.cam.position
-        .fromArray(CAR_ANCHORS.cockpit)
+        .fromArray(car.cockpitAnchor || CAR_ANCHORS.cockpit)
         .applyMatrix4(car.body.matrixWorld);
+      const anchor = car.cockpitAnchor || CAR_ANCHORS.cockpit;
       this.target
-        .set(CAR_ANCHORS.cockpit[0], 1.19, 25)
+        .set(anchor[0], anchor[1] - 0.06, 25)
         .applyMatrix4(car.body.matrixWorld);
       this.cam.up.set(0, 1, 0).transformDirection(car.body.matrixWorld);
       this.cam.lookAt(this.target);
@@ -53,14 +54,21 @@ export class CameraRig {
     this.aerialMix = damp(this.aerialMix, aerial ? 1 : 0, 3, dt);
     const wide = this.mode === 2,
       hood = this.mode === 1,
-      back = (wide ? 13 : 8.2) + this.aerialMix * (wide ? 11 : 7.8),
-      up = (wide ? 5.7 : 3.4) + this.aerialMix * (wide ? 6.3 : 3.6),
+      back =
+        (wide ? 13 : 8.2) +
+        (car?.cameraHeight || 0) +
+        this.aerialMix * (wide ? 11 : 7.8),
+      up =
+        (wide ? 5.7 : 3.4) +
+        (car?.cameraHeight || 0) +
+        this.aerialMix * (wide ? 6.3 : 3.6),
       s = Math.sin(hood ? v.heading : this.heading),
       c = Math.cos(hood ? v.heading : this.heading);
     this.position.set(
-      v.x + s * (hood ? 2.4 : -back),
-      (hood ? v.y : this.height) + (hood ? 1.13 : up),
-      v.z + c * (hood ? 2.4 : -back),
+      v.x + s * (hood ? (car?.bumperAnchor?.[2] ?? 2.4) : -back),
+      (hood ? v.y : this.height) +
+        (hood ? (car?.bumperAnchor?.[1] ?? 1.13) : up),
+      v.z + c * (hood ? (car?.bumperAnchor?.[2] ?? 2.4) : -back),
     );
     this.target.set(
       v.x + s * 18,

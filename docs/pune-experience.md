@@ -106,3 +106,24 @@ implausible nearest-route jumps, off-route shortcuts and backwards credit.
 An objective needs both earned distance and physical proximity. Returning to
 the road preserves earned progress. A missed checkpoint must be approached
 again; alternate progress is supported only on the authored fork.
+
+## Chai-stop presentation
+
+Active drives show a large turn arrow, the next road instruction and one
+remaining-distance line. Journey details remain expandable. In the final
+70 metres, the panel identifies the marked bay; once inside, it asks the driver
+to brake, then shows the continuous two-second parking countdown. Completion
+offers a postcard and a gentle three-note arrival cue, respecting the sound
+and ambience settings. The cue uses a fixed audio graph across repeated trips.
+
+Both fictional destination shelters now have a kettle lid/spout, a warm lamp
+and soft steam. Steam and lights belong to their loaded chunk and appear only
+within 100 metres. Low quality uses three steam sprites and an emissive bulb
+without a point light; other qualities use six sprites and one unshadowed light
+per stop. Reduced motion freezes the steam pattern. Shared textures, materials
+and geometry are disposed with the city.
+
+Destination postcards use a separate camera to include the parked car and
+shelter. The 1200 by 880 PNG has a cream frame, place caption and Wanderlane
+wordmark. Taking a postcard preserves the driving camera and screen size;
+its temporary render target is disposed immediately after capture.

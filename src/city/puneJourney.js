@@ -94,6 +94,10 @@ export function streetCharacter(road) {
 }
 
 export function turnGuidance(path, s) {
+  return turnInstruction(path, s).text;
+}
+
+export function turnInstruction(path, s) {
   const current = path.segment(s);
   for (let i = 1; i < 45; i++) {
     const r = path.segments[(current.index + i) % path.segments.length];
@@ -106,9 +110,15 @@ export function turnGuidance(path, s) {
       Math.cos(after.heading - before.heading),
     );
     if (Math.abs(angle) > 0.45 && gap > 3)
-      return `${angle > 0 ? "Turn left" : "Turn right"} in ${Math.round(gap / 5) * 5} m · ${r.tags.name || "local road"}`;
+      return {
+        direction: angle > 0 ? "left" : "right",
+        text: `${angle > 0 ? "Turn left" : "Turn right"} in ${Math.round(gap / 5) * 5} m · ${r.tags.name || "local road"}`,
+      };
   }
-  return `Continue on ${current.tags.name || "the local road"}`;
+  return {
+    direction: "straight",
+    text: `Continue on ${current.tags.name || "the local road"}`,
+  };
 }
 
 export function bayContains(bay, x, z, margin = 0) {
@@ -225,6 +235,9 @@ export function renderJourneyPlaces(data, path, height, block, res) {
     b(0, 0.6, 4.35, 2.6, 1.2, 0.8, res.timber);
     b(0, 1.25, 4.25, 2.85, 0.1, 1, res.cream);
     b(-0.8, 1.54, 4.25, 0.34, 0.5, 0.34, res.steel);
+    b(-0.8, 1.81, 4.25, 0.39, 0.05, 0.39, res.steel);
+    b(-0.8, 1.89, 4.25, 0.08, 0.12, 0.08, res.timber);
+    b(-0.56, 1.66, 4.25, 0.22, 0.08, 0.09, res.steel);
     for (const x of [-0.2, 0.15, 0.5])
       b(x, 1.4, 3.95, 0.13, 0.2, 0.13, res.cream);
     b(0, 2.37, 4.1, 1.5, 0.07, 0.12, res.glow);

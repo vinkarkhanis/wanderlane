@@ -1,6 +1,7 @@
 import { TrafficCar } from "./trafficCar.js";
 import { ROAD, damp } from "./config.js";
 import { random } from "./random.js";
+import { TrafficVisibility } from "./trafficVisibility.js";
 import {
   TrafficCollisions,
   resetTrafficImpact,
@@ -16,6 +17,10 @@ export class Traffic {
     this.mode = 0;
     this.collisions = new TrafficCollisions();
     this.rng = random(path.hash ^ 91823);
+    this.view = new TrafficVisibility();
+  }
+  setView(camera, visibleRange = Infinity) {
+    this.view.update(camera, visibleRange);
   }
   setMode(mode, player) {
     this.mode = mode;
@@ -48,6 +53,7 @@ export class Traffic {
     );
   }
   spawn(c, player, extra = 0) {
+    c.recycleDelay = 0;
     resetTrafficImpact(c);
     let s =
       player.near.distance +
@@ -124,10 +130,11 @@ export class Traffic {
             c.speed = Math.min(c.speed, o.speed);
           }
         }
-      if (
+      const outsideRoute =
         Math.abs(c.s - player.near.distance) > 560 ||
-        (c.direction < 0 && c.s < player.near.distance - 110)
-      )
+        (c.direction < 0 && c.s < player.near.distance - 110);
+      if (!outsideRoute) c.recycleDelay = 0;
+      if (outsideRoute && this.view.canRecycle(c, player, dt))
         this.spawn(c, player, Math.floor(this.rng() * 3) * 65);
       this.place(c, dt, night);
     }

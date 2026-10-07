@@ -8,7 +8,8 @@ import {
 
 // Original right-hand-drive cabin; all textures are generated locally.
 export class Cockpit {
-  constructor(parent) {
+  constructor(parent, name = "Aster GT") {
+    this.vehicleName = name.toUpperCase();
     this.group = new THREE.Group();
     parent.add(this.group);
     this.group.visible = false;
@@ -158,7 +159,7 @@ export class Cockpit {
     c.fillRect(0, 0, 640, 300);
     c.fillStyle = "#95b6ad";
     c.font = "18px Segoe UI";
-    c.fillText("A S T E R   /   G T", 32, 42);
+    c.fillText(this.vehicleName, 32, 42);
     c.fillStyle = "#eee5d4";
     c.font = "300 37px Segoe UI";
     c.fillText("WANDERLANE", 32, 113);
@@ -329,7 +330,7 @@ export class Cockpit {
     c.fillText(auto ? "AUTO" : "MANUAL", 854, 143);
     c.fillStyle = "#c1cfc5";
     c.font = "18px Segoe UI";
-    c.fillText("A S T E R   G T", 512, 42);
+    c.fillText(this.vehicleName, 512, 42);
     c.font = "300 113px Segoe UI";
     c.fillStyle = "#eeeadd";
     c.fillText(String(kmh), 512, 166);

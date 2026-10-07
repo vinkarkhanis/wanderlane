@@ -165,7 +165,7 @@ export function reflectionTexture() {
 
 // Keep the richer coachwork affordable: one static body draw per material.
 // Glass remains separate for sorting and cockpit windshield visibility.
-export function batchBodyMeshes(root, owned) {
+export function batchBodyMeshes(root, owned, scope = root.parent) {
   const groups = new Map();
   for (const mesh of [...root.children]) {
     if (!mesh.isMesh || mesh.material.transparent) continue;
@@ -207,7 +207,7 @@ export function batchBodyMeshes(root, owned) {
     root.add(merged);
   }
   const used = new Set();
-  root.parent.traverse((o) => {
+  scope.traverse((o) => {
     if (o.geometry) used.add(o.geometry);
   });
   for (const g of owned)

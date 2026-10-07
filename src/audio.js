@@ -86,6 +86,15 @@ export class AudioSystem {
           oscillator.start();
           return { oscillator, gain };
         });
+        this.arrivalVoices = [1, 2.01].map((ratio) => {
+          const oscillator = c.createOscillator(),
+            gain = c.createGain();
+          oscillator.type = "sine";
+          gain.gain.value = 0;
+          oscillator.connect(gain).connect(this.gain);
+          oscillator.start();
+          return { oscillator, gain, ratio };
+        });
         this.nodes = [
           this.gain,
           this.motorBody,
@@ -103,6 +112,7 @@ export class AudioSystem {
           this.cityFilter,
           this.cityNoiseGain,
           ...this.cityVoices.flatMap((v) => [v.oscillator, v.gain]),
+          ...this.arrivalVoices.flatMap((v) => [v.oscillator, v.gain]),
         ];
       }
       if (this.ctx.state !== "running") await this.ctx.resume();
@@ -112,6 +122,26 @@ export class AudioSystem {
       this.ctx = null;
       this.nodes = [];
       this.status = "Sound unavailable";
+    }
+  }
+  playArrival() {
+    if (!this.ctx || this.ctx.state !== "running" || this.muted) return;
+    const t = this.ctx.currentTime + 0.03;
+    this.arrivalCueCount = (this.arrivalCueCount ?? 0) + 1;
+    for (const { oscillator, gain, ratio } of this.arrivalVoices) {
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(0, t);
+      for (const [i, note] of [523.25, 659.25, 783.99].entries()) {
+        const start = t + i * 0.23;
+        oscillator.frequency.setValueAtTime(note * ratio, start);
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(
+          this.ambience * (ratio === 1 ? 0.09 : 0.025),
+          start + 0.015,
+        );
+        gain.gain.exponentialRampToValueAtTime(0.00001, start + 0.22);
+      }
+      gain.gain.setValueAtTime(0, t + 0.7);
     }
   }
   update(v, night, paused, city = null) {

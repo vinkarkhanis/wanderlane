@@ -70,7 +70,12 @@ export class TrafficCollisions {
         v: player,
         player: true,
         pose: player,
-        b: body(player, player, { halfWidth: 1.08, halfLength: 2.32 }, 1450),
+        b: body(
+          player,
+          player,
+          player.bounds || { halfWidth: 1.08, halfLength: 2.32 },
+          player.mass || 1450,
+        ),
       });
     cars.forEach((v, i) => {
       if (!v.waiting && v.car.group.visible)

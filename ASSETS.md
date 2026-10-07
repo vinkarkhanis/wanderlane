@@ -34,6 +34,12 @@ All geometries, materials and textures are shared and disposed by WorldManager.
 
 ## Aster GT refinement
 
+The selectable Mira Compact, Serein Sedan, Terra SUV, Kestrel 400 motorbike
+and helmeted rider, and Atlas Pickup in `src/garageVehicle.js` and
+`src/garageCoachwork.js` are original
+fictional procedural artwork. Their generated visual assets use the same
+CC0-1.0 dedication above, with no external models or textures.
+
 The smooth body, wheel arches, trim and wheels in `src/car.js` and
 `src/carGeometry.js`, and the cabin in `src/cockpit.js`, are original procedural
 project artwork. The sky-reflection map, rear Aster identifier and instrument

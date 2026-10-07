@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#172d31" />
     <meta
       name="description"
-      content="Wanderlane — a peaceful scenic drive in the fictional Aster GT."
+      content="Wanderlane — a peaceful scenic drive with fictional cars, a motorbike and a pickup truck."
     />
     <title>Wanderlane — Take the long way</title>
     <link rel="icon" href="data:," />
@@ -17,7 +17,8 @@
     <header>
       <div class="wordmark"><span class="mark">✧</span> WANDERLANE</div>
       <div class="edition">
-        THE OPEN ROAD COLLECTION <span> / </span> ASTER GT
+        THE OPEN ROAD COLLECTION <span> / </span>
+        <span id="vehicleName">ASTER GT</span>
       </div>
     </header>
     <div id="vista">
@@ -80,9 +81,21 @@
         <small id="journeyRouteHint"></small>
       </label>
       <p id="tripObjective" role="status"></p>
-      <p id="tripGuidance"></p>
+      <div id="tripNavigation">
+        <span id="tripDirection" aria-hidden="true">↑</span>
+        <p id="tripGuidance"></p>
+      </div>
       <p id="tripMarathi" lang="mr"></p>
       <p id="tripSecondary"></p>
+      <div id="tripArrival" hidden>
+        <p id="tripArrivalHint" role="status"></p>
+        <progress
+          id="tripArrivalProgress"
+          max="2"
+          value="0"
+          aria-label="Parking stop progress"
+        ></progress>
+      </div>
       <progress
         id="tripProgress"
         max="1"
@@ -160,8 +173,8 @@
         <p>Take the long way.</p>
         <div class="rule"></div>
         <p class="intro">
-          An open road. A changing sky.<br />Your Aster GT, and nowhere you need
-          to be.
+          An open road. A changing sky.<br />Choose your ride, and nowhere you
+          need to be.
         </p>
         <button id="startBtn" disabled>Preparing your drive…</button
         ><small>WASD / arrows to drive · Space for auto-drive</small>
@@ -174,6 +187,13 @@
         <p>Take the long way.</p>
         <div id="cityLoading" role="status" hidden></div>
         <div class="settings-grid">
+          <label
+            >Vehicle<select
+              id="vehicleModel"
+              aria-describedby="vehicleDescription"
+            ></select
+          ></label>
+          <p id="vehicleDescription" role="status"></p>
           <label
             >Drive Mode<select id="driveMode">
               <option value="endless">Endless Drive</option>
@@ -294,8 +314,8 @@
         <details>
           <summary>Credits &amp; map sources</summary>
           <p>
-            WANDERLANE · original Aster GT, procedural art and sound. Three.js:
-            MIT.<br /><a
+            WANDERLANE · original fictional vehicles, procedural art and sound.
+            Three.js: MIT.<br /><a
               href="https://www.openstreetmap.org/copyright"
               target="_blank"
               rel="noopener"
