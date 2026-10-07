@@ -34,6 +34,7 @@ export async function writeChunks(
         buildings: [],
         land: [],
         points: [],
+        paths: [],
         terrain: [],
       });
     }
@@ -76,6 +77,11 @@ export async function writeChunks(
     }
   }
   for (const p of osm.points) assign(p, "points", [...p.p, ...p.p]);
+  for (const p of osm.walkways || []) {
+    const x = (p.p[0] + p.q[0]) / 2,
+      z = (p.p[1] + p.q[1]) / 2;
+    assign(p, "paths", [x, z, x, z]);
+  }
   await mkdir(root + "/chunks", { recursive: true });
   const entries = [];
   for (const c of chunks.values()) {

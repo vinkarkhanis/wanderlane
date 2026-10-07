@@ -21,7 +21,7 @@ export function makeRoute(graph, osm, config, report) {
             : false),
     );
   // Directed shortest paths between selected district waypoints. Never synthesize links.
-  const targetCoords = [
+  const targetCoords = config.routeTargets || [
     [18.561, 73.783],
     [18.555, 73.801],
     [18.54, 73.794],

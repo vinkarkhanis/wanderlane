@@ -93,6 +93,14 @@ materials are streamed and disposed with the world, and nearby vegetation is
 excluded from their footprints.
 # Pune-inspired courtyards and market
 
+The Pune outskirts expansion uses cached OpenStreetMap road, building,
+pedestrian-path and land-use geometry under the existing ODbL attribution.
+`src/city/puneStreetscape.js` and `cityWorld.js` supply original stylized mall
+facades, source-name signs and inferred pavement treatment. These are not
+surveyed facade replicas. No mall logos, photographs or external 3D models are
+used. Extended hills are original synthetic terrain, not a measured elevation
+dataset. Source and rebuilding details are in `docs/pune-expansion.md`.
+
 `src/city/puneScenes.js` contains original procedural misal-and-chai tables,
 a wada-inspired timber gateway with tiled eaves and a tulsi planter, and flower
 and vegetable handcarts. These dress fictional scenes along the Baner–Pashan

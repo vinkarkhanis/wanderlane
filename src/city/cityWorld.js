@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { inside, nearest, meshHeight } from "./spatial.js";
 import { random, hashSeed } from "../random.js";
 import { vegetationResources, addGroundDetail } from "../vegetation.js";
-import { detailCandidates, tileDetails } from "./cityDetails.js";
+import { detailCandidates, tileDetails, roadName } from "./cityDetails.js";
 import { CitySignalView } from "./citySignalView.js";
 import { CityActors } from "./cityActors.js";
 import { ChaiStopView } from "./chaiStopView.js";
@@ -21,6 +21,7 @@ import {
   bayContains,
   clearParkingApproach,
 } from "./puneJourney.js";
+import { pavementPanels, renderMappedMall } from "./puneStreetscape.js";
 export const SEASONS = ["Summer", "Monsoon", "Winter"];
 const colors = {
   Summer: [0x9b9566, 0xa5ae74, 0x414548],
@@ -153,6 +154,13 @@ export class CityWorld {
       line: mat(0xd9d1b1, { emissive: 0xddd4ae, emissiveIntensity: 0.2 }),
       water: mat(0x5b888a, { roughness: 0.3, metalness: 0.25 }),
       park: mat(0x6f8751),
+      woodland: mat(0x4f6843),
+      meadow: mat(0x8e9d62),
+      fields: mat(0xb2a277),
+      rock: mat(0x8d8f82),
+      mallGlass: mat(0x497581, { roughness: 0.2, metalness: 0.55 }),
+      mallStone: mat(0xe3d3b6),
+      footpath: mat(0xa8a59a),
       roof: mat(0x8b8b7a),
       trim: mat(0x7a817b),
       rubber: mat(0x242c29),
@@ -577,6 +585,62 @@ export class CityWorld {
       if (!streetParts.has(material)) streetParts.set(material, []);
       streetParts.get(material).push([x, y, z, w, h, d, yaw]);
     };
+    const mappedPavements = pavementPanels(
+      data,
+      this.path,
+      this.junctionNodes,
+      this.quality,
+    );
+    for (const p of mappedPavements) {
+      streetBlock(
+        p.x,
+        p.y,
+        p.z,
+        p.width,
+        0.12,
+        p.length,
+        p.yaw,
+        this.res.pavement,
+      );
+      const x = p.x - p.nx * p.side * 0.85,
+        z = p.z - p.nz * p.side * 0.85;
+      streetBlock(
+        x,
+        p.y + 0.055,
+        z,
+        0.16,
+        0.22,
+        p.length,
+        p.yaw,
+        this.res.concrete,
+      );
+      if ((Math.round(p.x + p.z) & 7) === 0)
+        streetBlock(x, p.y + 0.18, z, 0.28, 0.035, 0.55, p.yaw, this.res.trim);
+    }
+    for (const p of data.paths || []) {
+      const x = (p.p[0] + p.q[0]) / 2,
+        z = (p.p[1] + p.q[1]) / 2;
+      if (
+        [...this.path.grid.query(x, z, 8)].some(
+          (r) => nearest([x, z], r.p, r.q).d < r.width / 2 + 0.7,
+        )
+      )
+        continue;
+      if (data.land.some((l) => l.kind === "water" && inside([x, z], l.outer)))
+        continue;
+      add(
+        roadRibbon(
+          {
+            ...p,
+            y0: this.terrainHeight(data, ...p.p),
+            y1: this.terrainHeight(data, ...p.q),
+          },
+          p.width,
+          0.035,
+        ),
+        this.res.footpath,
+      );
+    }
     const bays = cityStreetBays(
       data,
       this.path,
@@ -604,6 +668,96 @@ export class CityWorld {
     );
     let rooftopFittings = 0;
     for (const b of data.buildings) {
+      renderMappedMall(b, streetBlock, this.res);
+      if (b.style === "mall") {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1024;
+        canvas.height = 128;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#173b43";
+        ctx.fillRect(0, 0, 1024, 128);
+        ctx.fillStyle = "#f5e6c9";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = "bold 55px sans-serif";
+        ctx.fillText(roadName(b.mallName) || "Shopping centre", 512, 64, 970);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const material = new THREE.MeshStandardMaterial({
+          map: texture,
+          roughness: 0.8,
+          side: THREE.DoubleSide,
+        });
+        owned.push(material, texture);
+        const candidates = b.outer
+          .map((a, i) => {
+            const q = b.outer[(i + 1) % b.outer.length],
+              x = (a[0] + q[0]) / 2,
+              z = (a[1] + q[1]) / 2;
+            return {
+              a,
+              q,
+              x,
+              z,
+              len: Math.hypot(q[0] - a[0], q[1] - a[1]),
+              gap: Math.abs(this.path.findNearestRoadPoint(x, z, {}).offset),
+            };
+          })
+          .filter((e) => e.len > 10)
+          .sort((a, b) => a.gap - b.gap);
+        for (const e of candidates.slice(0, 4)) {
+          const yaw = Math.atan2(e.q[0] - e.a[0], e.q[1] - e.a[1]);
+          let nx = Math.cos(yaw),
+            nz = -Math.sin(yaw);
+          if (inside([e.x + nx * 0.2, e.z + nz * 0.2], b.outer)) {
+            nx = -nx;
+            nz = -nz;
+          }
+          const g = new THREE.PlaneGeometry(
+            Math.min(24, e.len * 0.65),
+            Math.min(2.5, b.height * 0.2),
+          );
+          g.rotateY(yaw + Math.PI / 2);
+          g.translate(e.x + nx * 0.22, b.y + b.height * 0.82, e.z + nz * 0.22);
+          add(g, material);
+          if (e === candidates[0] && e.gap > 12) {
+            const x = e.x + nx * 1.7,
+              z = e.z + nz * 1.7;
+            if (
+              !data.buildings.some(
+                (o) =>
+                  o.id !== b.id &&
+                  x > o.bounds[0] - 4 &&
+                  x < o.bounds[2] + 4 &&
+                  z > o.bounds[1] - 4 &&
+                  z < o.bounds[3] + 4,
+              )
+            ) {
+              streetBlock(
+                x,
+                b.y + 3.2,
+                z,
+                4.5,
+                0.25,
+                Math.min(12, e.len * 0.5),
+                yaw,
+                this.res.mallGlass,
+              );
+              for (const side of [-1, 1])
+                streetBlock(
+                  x + Math.sin(yaw) * side * 4,
+                  b.y + 1.6,
+                  z + Math.cos(yaw) * side * 4,
+                  0.24,
+                  3.2,
+                  0.24,
+                  0,
+                  this.res.mallStone,
+                );
+            }
+          }
+        }
+      }
       const style = buildingStyle(b);
       styles[style.family] = (styles[style.family] || 0) + 1;
       rooftopFittings += dressBuilding(
@@ -643,11 +797,13 @@ export class CityWorld {
       }
       add(
         g,
-        benchmark &&
-          style.family === "plaster" &&
-          this.res.benchmarkFacade.map.image
-          ? this.res.benchmarkFacade
-          : this.facades[style.index],
+        b.style === "mall"
+          ? this.res.mallStone
+          : benchmark &&
+              style.family === "plaster" &&
+              this.res.benchmarkFacade.map.image
+            ? this.res.benchmarkFacade
+            : this.facades[style.index],
       );
       add(surface(b, b.y + b.height + 0.025), this.res.roof);
     }
@@ -657,7 +813,10 @@ export class CityWorld {
           l.waterY ??
           Math.min(...l.outer.map((p) => this.terrainHeight(data, ...p)));
         add(surface(l, y + 0.06), this.res.water);
-      } else if (l.kind === "park") {
+      } else if (
+        l.kind === "park" ||
+        ["meadow", "fields", "rock"].includes(l.terrainClass)
+      ) {
         const g = surface(l, 0),
           p = g.attributes.position;
         for (let i = 0; i < p.count; i++)
@@ -674,7 +833,7 @@ export class CityWorld {
             g.boundingBox.max.z,
           ],
         });
-        add(g, this.res.park);
+        add(g, this.res[l.terrainClass] || this.res.park);
       }
     }
     for (const p of edges) {
@@ -887,7 +1046,7 @@ export class CityWorld {
       rooftopFittings,
       frontages,
       journeyPlaces,
-      pavementBays: bays.length,
+      pavementBays: bays.length + mappedPavements.length,
       edges,
       details,
       data,

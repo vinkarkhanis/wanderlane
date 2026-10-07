@@ -1,26 +1,23 @@
 {
   "bounds": {
-    "west": 73.772,
-    "south": 18.534,
-    "east": 73.81,
-    "north": 18.57
+    "west": 73.745,
+    "south": 18.508,
+    "east": 73.834,
+    "north": 18.588
   },
-  "sourceSha256": "d0b7908e3548680da58be2a1f3f892752e9fd40cf24127cd4e2991d0aa04527e",
+  "sourceSha256": "0bdaa9ba8cd0a59a6549779353572f4780789b6874c3c2d115848fdf365b0bf8",
   "roadLengthByClass": {
-    "secondary": 24727.41,
-    "primary": 9455.61,
-    "tertiary": 22246.03,
-    "trunk": 4431.32,
-    "service": 12591.02,
-    "residential": 102939.06,
-    "living_street": 1098.92,
-    "unclassified": 66.02
+    "tertiary": 87747.99,
+    "residential": 392781.21,
+    "primary": 57912.56,
+    "service": 115028.28,
+    "secondary": 60403.69,
+    "trunk": 22564.36,
+    "living_street": 8352.91,
+    "unclassified": 9260.74
   },
-  "malformed": [
-    "Missing relation member 2794610/207832298",
-    "Missing relation member 2794610/207832299"
-  ],
-  "excludedRoadWays": 1054,
+  "malformed": [],
+  "excludedRoadWays": 3704,
   "warnings": [
     "Finite pilot boundary: roads are truncated to in-bounds nodes.",
     "Bridge decks use simplified elevations and approach ramps; complex vertical topology requires manual review.",
@@ -32,29 +29,48 @@
     "Unspecified building heights inferred deterministically from type and footprint area.",
     "Synthetic terrain — not surveyed Pune elevation"
   ],
-  "disconnectedDriveableSegments": 132,
-  "connectedComponents": 30,
-  "roadSegments": 5576,
-  "bridges": 43,
-  "tunnels": 0,
-  "landusePolygons": 364,
-  "parks": 25,
-  "waterPolygons": 12,
-  "buildingsExplicitHeight": 32,
-  "buildingsInferredHeight": 5299,
-  "buildingsOmittedForOverlap": 1139,
-  "buildingsImported": 5331,
-  "elevatedRoadSegments": 614,
+  "disconnectedDriveableSegments": 2658,
+  "connectedComponents": 87,
+  "roadSegments": 23202,
+  "bridges": 202,
+  "tunnels": 23,
+  "landusePolygons": 1035,
+  "parks": 89,
+  "waterPolygons": 29,
+  "walkwaySegments": 4194,
+  "buildingsExplicitHeight": 180,
+  "buildingsInferredHeight": 22553,
+  "buildingsOmittedForOverlap": 5946,
+  "buildingsImported": 22733,
+  "elevatedRoadSegments": 1453,
   "bridgeTreatment": "Simplified shared-node decks, source layer * 5 m (3.5–14 m), connected approach ramps at 4.5% added slope; manual review required.",
+  "preservedPilotRoads": 5576,
   "turnRestrictions": 4,
+  "explorationRoutes": [
+    {
+      "id": "sus-hills",
+      "name": "Sus–Pashan Hill Roads",
+      "length": 11860
+    },
+    {
+      "id": "bavdhan",
+      "name": "Bavdhan Outskirts",
+      "length": 12803
+    },
+    {
+      "id": "aundh-retail",
+      "name": "Aundh & Baner City Loop",
+      "length": 10118
+    }
+  ],
   "unsupportedGeometry": {
-    "railwayWays": 26,
+    "railwayWays": 35,
     "barrierWays": 34,
     "waterwayLines": 10,
-    "nonDriveablePaths": 129,
-    "note": "These source lines are retained in the cached database but not rendered in this first pilot."
+    "nonDriveablePaths": 482,
+    "note": "Footways, cycleways, paths and steps are imported as decorative pedestrian surfaces; railway and barrier lines remain unrendered."
   },
-  "trafficSignals": 19,
+  "trafficSignals": 55,
   "route": {
     "name": "Baner–Pashan Explorer",
     "length": 10731,

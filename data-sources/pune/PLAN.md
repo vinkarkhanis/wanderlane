@@ -1,5 +1,10 @@
 # Pune pilot implementation plan
 
+The original plan below is retained as provenance. The active map has expanded
+to Pune and its western outskirts; see `docs/pune-expansion.md` and
+`data-sources/pune/expansion-metadata.json`. The original road records and
+curated journeys are preserved inside the wider map.
+
 The existing WANDERLANE (formerly Milelight) build uses metres, local +Z vehicle
 forward, a single arc-length RoadPath with streamed 160 m strips, and spatial
 nearest-road queries. Vehicle reset samples the road; lightweight fixed-step

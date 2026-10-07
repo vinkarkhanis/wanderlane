@@ -3,7 +3,18 @@
 Map data © OpenStreetMap contributors, available under ODbL 1.0.
 [OpenStreetMap copyright](https://www.openstreetmap.org/copyright).
 
-This is the first **Baner–Aundh–Pashan pilot**, not all Pune. Bounds are
+The active map now covers **Pune and its western outskirts**, about 84 km²:
+73.745–73.834° E, 18.508–18.588° N. See
+[the expansion notes](../docs/pune-expansion.md) and
+[expansion metadata](pune/expansion-metadata.json). The merged source cache has
+261,340 elements. It retains the original pilot element versions and adds a
+bounded Overpass extract. Original routes and road IDs remain stable.
+`npm run import:pune` rebuilds this expanded cache without network access;
+`npm run fetch:pune:expansion` explicitly refreshes the source from Overpass.
+The in-game downloadable ODbL database offer contains the merged source.
+Buildings and sidewalks are stylized; terrain elevation remains synthetic.
+
+The following documents the retained original **Baner–Aundh–Pashan pilot**. Bounds are
 73.772–73.810° E, 18.534–18.570° N (about 4.0 × 4.0 km). The polygon is in
 [pune/bounds.geojson](pune/bounds.geojson). Pashan Lake is included; Sus itself
 lies beyond the pilot, with the Pashan–Sus approach represented.
@@ -17,7 +28,7 @@ source of this snapshot. Normal gameplay never accesses these services.
 
 ## Reproduce
 
-`npm run import:pune` uses the committed `pune/osm-source.json.gz`, without network
+`npm run import:pune:pilot` uses the committed `pune/osm-source.json.gz`, without network
 access or Python. `npm run validate:pune` verifies generated chunks and route.
 The snapshot has 67,167 deduplicated OSM elements. Four original XML quadrants
 are in ignored `raw/`; `python tools/convert-osm.py` reproduces JSON from them.

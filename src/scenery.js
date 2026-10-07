@@ -3,6 +3,7 @@ import { terrainHeight } from "./heightfield.js";
 import { random } from "./random.js";
 import { ROAD } from "./config.js";
 import { settlementContains } from "./settlementPlan.js";
+import { cityLakeZone } from "./city/endlessCityPlaces.js";
 export function makeTerrain(path, index, biome, res) {
   const start = index * ROAD.chunk,
     z0 = path.zAt(start),
@@ -11,15 +12,18 @@ export function makeTerrain(path, index, biome, res) {
     col = [],
     idx = [],
     p = {};
-  const nx = 64,
-    nz = 20,
+  const nx = 160,
+    nz = 40,
     color = new THREE.Color();
   for (let j = 0; j <= nz; j++)
     for (let i = 0; i <= nx; i++) {
       const x = -600 + (i * 1200) / nx,
         z = z0 + ((z1 - z0) * j) / nz;
       path.findNearestRoadPoint(x, z, p);
-      const y = terrainHeight(path, p.distance, p.offset, biome) - 0.22;
+      // Keep the green terrain beneath asphalt, including curved uphill segments.
+      const y =
+        terrainHeight(path, p.distance, p.offset, biome) -
+        (Math.abs(p.offset) < 12 ? 0.65 : 0.22);
       pos.push(x, y, z);
       color.copy(res.ground.color);
       const v =
@@ -100,6 +104,7 @@ export function makeScenery(
     path.findNearestRoadPoint(p.x, p.z, sample);
     if (
       Math.abs(sample.offset) < 12 ||
+      (path.urban && cityLakeZone(sample.distance, sample.offset)) ||
       settlementContains(settlements, p.x, p.z, 5)
     )
       continue;
@@ -182,7 +187,8 @@ export function makeScenery(
       p = path.getLanePosition(s, off);
     path.findNearestRoadPoint(p.x, p.z, sample);
     if (
-      Math.abs(sample.offset) < 6.15 ||
+      Math.abs(sample.offset) < (path.urban ? 8.5 : 6.15) ||
+      (path.urban && cityLakeZone(sample.distance, sample.offset)) ||
       settlementContains(settlements, p.x, p.z, 5)
     )
       continue;
@@ -208,7 +214,7 @@ export function makeScenery(
   res.instances(group, res.rock, res.stone, rocks);
   // Distant formations are low-detail, instanced, and hidden by atmospheric fog at recycling boundaries.
   const hills = [];
-  for (const side of [-1, 1])
+  for (const side of biome === "canyon" || biome === "desert" ? [-1, 1] : [])
     for (let i = 0; i < 4; i++) {
       const s = start + i * 40,
         p = path.getLanePosition(s, side * (240 + r() * 180));

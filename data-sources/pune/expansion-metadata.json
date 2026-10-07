@@ -1,0 +1,19 @@
+{
+  "source": "OpenStreetMap via Overpass API, merged with original pilot snapshot",
+  "url": "https://overpass-api.de/api/interpreter",
+  "retrievedAt": "2026-10-07T13:28:34.975Z",
+  "osmTimestamp": "2026-10-07T13:26:19Z",
+  "licence": "ODbL-1.0",
+  "copyright": "https://www.openstreetmap.org/copyright",
+  "sha256": "0bdaa9ba8cd0a59a6549779353572f4780789b6874c3c2d115848fdf365b0bf8",
+  "bounds": {
+    "west": 73.745,
+    "south": 18.508,
+    "east": 73.834,
+    "north": 18.588
+  },
+  "query": "[out:json][timeout:180];(way[highway](18.508,73.745,18.588,73.834);way[building](18.508,73.745,18.588,73.834);way[landuse](18.508,73.745,18.588,73.834);way[natural](18.508,73.745,18.588,73.834);way[leisure](18.508,73.745,18.588,73.834);way[water](18.508,73.745,18.588,73.834);way[shop=mall](18.508,73.745,18.588,73.834);relation[type=multipolygon](18.508,73.745,18.588,73.834);node[shop=mall](18.508,73.745,18.588,73.834);node[place](18.508,73.745,18.588,73.834);node[highway=traffic_signals](18.508,73.745,18.588,73.834););(._;>;);out body;",
+  "originalSourceSha256": "d0b7908e3548680da58be2a1f3f892752e9fd40cf24127cd4e2991d0aa04527e",
+  "preprocessing": "Original pilot OSM element versions retained; new elements added outside and within the wider extent. Prepared data is distributed offline.",
+  "modifiedDatabaseDistributed": true
+}

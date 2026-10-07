@@ -17,6 +17,11 @@ import {
 } from "./city/puneJourney.js";
 import { CityJourneyMap } from "./city/cityJourneyMap.js";
 import { signalPlan } from "./city/citySignals.js";
+import {
+  cityDistrict,
+  cityAreaStart,
+  nearbyCityPlaces,
+} from "./city/endlessCityPlaces.js";
 import * as THREE from "three";
 import { RoadPath } from "./roadPath.js";
 import { WorldManager } from "./worldManager.js";
@@ -164,14 +169,51 @@ async function switchMode() {
     if (requested === "pune") {
       const base = new URL("./assets/cities/pune/", document.baseURI);
       const get = async (file) => {
-        const r = await fetch(new URL(file, base));
+        const url = new URL(file, base);
+        const previewData = document.querySelector(
+          'meta[name="wanderlane-preview-data"]',
+        )?.content;
+        if (previewData) url.searchParams.set("preview", previewData);
+        const r = await fetch(url, { cache: "no-store" });
         if (!r.ok) throw Error(file + " HTTP " + r.status);
         return r.json();
       };
       const manifest = await get("manifest.json"),
         nav = await get(manifest.navigation);
       cityData = { manifest, nav, base };
-      nextPath = new CityPath(journeyNavigation(nav), manifest);
+      const selectedRoute = saved.cityRoute || el("puneRoute").value || "pilot";
+      el("puneRoute").replaceChildren();
+      for (const route of [
+        { id: "pilot", name: "Baner–Pashan Explorer · original journeys" },
+        ...(nav.explorationRoutes || []),
+      ]) {
+        const option = document.createElement("option");
+        option.value = route.id;
+        option.textContent =
+          route.name +
+          (route.length ? ` · ${(route.length / 1000).toFixed(1)} km` : "");
+        el("puneRoute").append(option);
+      }
+      el("puneRoute").value = (nav.explorationRoutes || []).some(
+        (r) => r.id === selectedRoute,
+      )
+        ? selectedRoute
+        : "pilot";
+      const exploration = nav.explorationRoutes?.find(
+        (r) => r.id === el("puneRoute").value,
+      );
+      nextPath = new CityPath(
+        exploration
+          ? {
+              ...nav,
+              route: exploration,
+              originalRoute: exploration,
+              exploration: true,
+              fork: { start: Infinity },
+            }
+          : journeyNavigation(nav),
+        manifest,
+      );
       nextWorld = new CityWorld(
         scene,
         nextPath,
@@ -182,11 +224,20 @@ async function switchMode() {
       );
     } else {
       nextPath = new RoadPath(seed);
+      nextPath.urban = requested === "endless-city";
       nextWorld = new WorldManager(scene, nextPath, biome, quality);
     }
     const nextVehicle = new Vehicle(nextPath, selectedVehicle);
-    nextVehicle.lane = requested === "pune" ? -1.6 : endlessLane;
-    nextVehicle.reset(40, nextVehicle.lane);
+    nextVehicle.lane =
+      requested === "pune"
+        ? -1.6
+        : requested === "endless-city"
+          ? -2
+          : endlessLane;
+    nextVehicle.reset(
+      requested === "endless-city" ? cityAreaStart(el("cityArea").value) : 40,
+      nextVehicle.lane,
+    );
     if (requested === "pune") {
       await nextWorld.ready(nextVehicle);
       nextPath.groundHeight = (x, z) => nextWorld.heightAt(x, z);
@@ -195,8 +246,12 @@ async function switchMode() {
     // Enable the requested lived-in city once; subsequent Off/Light choices
     // remain persistent and switching back to Pune does not override them.
     const trafficMode =
-      requested === "pune" && !cityActivityIntroduced ? 2 : traffic.mode;
-    if (requested === "pune") cityActivityIntroduced = true;
+      (requested === "pune" || requested === "endless-city") &&
+      !cityActivityIntroduced
+        ? 2
+        : traffic.mode;
+    if (requested === "pune" || requested === "endless-city")
+      cityActivityIntroduced = true;
     experience?.dispose();
     signals?.dispose();
     world.dispose();
@@ -206,7 +261,10 @@ async function switchMode() {
     world = nextWorld;
     driveMode = requested;
     if (requested === "pune") el("journeyRoute").value = "main";
-    experience = driveMode === "pune" ? new CityExperience(path) : null;
+    experience =
+      driveMode === "pune" && !path.nav.exploration
+        ? new CityExperience(path)
+        : null;
     if (experience) {
       experience.journal = journal;
       attachJourneyDriving();
@@ -232,10 +290,13 @@ async function switchMode() {
     el("cityLoading").hidden = true;
     toast(
       driveMode === "pune"
-        ? "Pune pilot · " +
+        ? (path.nav.exploration ? path.nav.route.name : "Pune city journeys") +
+            " · " +
             cityData.manifest.elevation.label +
             " · drive on the left"
-        : "Back to Endless Drive",
+        : requested === "endless-city"
+          ? "Endless City · Pune-inspired streets · keep driving"
+          : "Back to Endless Drive",
     );
   } catch (e) {
     nextWorld?.dispose();
@@ -246,7 +307,7 @@ async function switchMode() {
       ". Endless Drive remains available.";
   } finally {
     switching = false;
-    paused = wasPaused || el("settings").open;
+    paused = !started || el("settings").open || el("postcardDialog").open;
     updateLabels();
   }
 }
@@ -258,6 +319,8 @@ function toast(text) {
 }
 function persist() {
   saveSettings({
+    cityRoute: el("puneRoute").value,
+    cityArea: el("cityArea").value,
     vehicle: selectedVehicle,
     driveMode,
     seed,
@@ -328,11 +391,14 @@ function returnToRoad() {
   toast("Back on the road. Take your time.");
 }
 function updateLabels() {
+  el("puneRoute").disabled = switching || vehicle.flight !== "ground";
   el("vehicleName").textContent = vehicle.spec.name.toUpperCase();
   el("vehicleModel").disabled = switching || vehicle.flight !== "ground";
   el("terrainBtn").textContent =
     driveMode === "pune" ? season : BIOMES[biome].name;
   el("puneOptions").hidden = driveMode !== "pune";
+  el("endlessCityOptions").hidden = driveMode !== "endless-city";
+  el("cityArea").disabled = switching || vehicle.flight !== "ground";
   el("mapAttribution").hidden = driveMode !== "pune";
   el("lane").disabled = driveMode === "pune";
   el("lane").value = driveMode === "pune" ? "-2" : String(vehicle.lane);
@@ -341,7 +407,9 @@ function updateLabels() {
   el("biomeLabel").textContent =
     driveMode === "pune"
       ? "PUNE · " + season.toUpperCase()
-      : biome.toUpperCase();
+      : driveMode === "endless-city"
+        ? "ENDLESS CITY · PUNE INSPIRED"
+        : biome.toUpperCase();
   el("timeBtn").textContent = TIMES[env.mode];
   el("timeLabel").textContent = TIMES[env.mode].toUpperCase();
   el("autoBtn").textContent = auto ? "Auto drive" : "Manual";
@@ -521,6 +589,35 @@ el("discoveryDrive").addEventListener("change", () => {
     chooseDiscovery();
   }
 });
+el("puneRoute").addEventListener("change", () => {
+  if (!switching && driveMode === "pune") {
+    saved.cityRoute = el("puneRoute").value;
+    switchMode();
+  }
+});
+el("cityArea").value = [
+  "market",
+  "lake",
+  "hills",
+  "temple",
+  "hotel",
+  "avenue",
+].includes(saved.cityArea)
+  ? saved.cityArea
+  : "market";
+el("cityArea").addEventListener("change", () => {
+  if (driveMode !== "endless-city" || switching || vehicle.flight !== "ground")
+    return;
+  controls.clear();
+  auto = false;
+  vehicle.reset(cityAreaStart(el("cityArea").value), vehicle.lane);
+  traffic.setMode(traffic.mode, vehicle);
+  rig.snap = true;
+  updateWorld(true);
+  updateLabels();
+  persist();
+  toast(cityDistrict(vehicle.near.distance).name + " · enjoy the drive");
+});
 function currentPostcard() {
   const a = experience?.definition.arrival;
   if (
@@ -688,6 +785,7 @@ el("seedBtn").addEventListener("click", () => {
   const mode = traffic.mode;
   traffic.dispose();
   path = new RoadPath(seed);
+  path.urban = driveMode === "endless-city";
   vehicle = new Vehicle(path, selectedVehicle);
   vehicle.lane = Number(el("lane").value);
   traffic = new Traffic(scene, path);
@@ -725,7 +823,9 @@ renderer.domElement.addEventListener("webglcontextlost", (e) => {
 });
 renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY[quality].dpr));
 setShadows();
-const preferredDriveMode = ["endless", "pune"].includes(saved.driveMode)
+const preferredDriveMode = ["endless", "endless-city", "pune"].includes(
+  saved.driveMode,
+)
   ? saved.driveMode
   : "pune";
 el("driveMode").value = preferredDriveMode;
@@ -743,7 +843,8 @@ function loop(now) {
   last = now;
   frameMs += (dt * 1000 - frameMs) * 0.05;
   if (!paused) {
-    traffic.setView(rig.cam, scene.fog?.far);
+    // Older traffic modules in an already-open tab must not stop driving.
+    traffic.setView?.(rig.cam, scene.fog?.far);
     accumulator += dt;
     const input = controls.input;
     while (accumulator >= step) {
@@ -892,14 +993,19 @@ function loop(now) {
       path,
       vehicle,
       experience?.snapshot,
-      started && !paused && driveMode === "pune",
+      started &&
+        !paused &&
+        (driveMode === "pune" || driveMode === "endless-city"),
     );
     const canonical = path.city
       ? path.canonicalDistance(vehicle.near.distance)
       : 0;
-    const forkGap = path.city ? path.nav.fork.start - canonical : Infinity;
+    const forkGap = path.city
+      ? (path.nav.fork?.start ?? Infinity) - canonical
+      : Infinity;
     const routeChoiceVisible =
       driveMode === "pune" &&
+      !!experience &&
       experience.status !== "completed" &&
       el("discoveryDrive").value !== "baner-evening" &&
       (experience.status !== "active" || (forkGap >= -5 && forkGap < 180));
@@ -911,10 +1017,23 @@ function loop(now) {
     el("speed").textContent = Math.round(Math.abs(vehicle.speed) * 3.6);
     el("dist").textContent = vehicle.dist.toFixed(2);
     el("surface").textContent = (vehicle.surface || "Asphalt").toUpperCase();
-    el("routeStatus").hidden = driveMode !== "pune";
+    el("routeStatus").hidden =
+      driveMode !== "pune" && driveMode !== "endless-city";
+    if (driveMode === "endless-city") {
+      const district = cityDistrict(vehicle.near.distance);
+      const next = nearbyCityPlaces(path, vehicle.near.distance, 1600)
+        .filter((p) => p.s >= vehicle.near.distance - 30)
+        .sort((a, b) => a.s - b.s)[0];
+      el("routeStatus").textContent =
+        district.name +
+        (next
+          ? ` · ${next.name} ${Math.max(0, Math.round(next.s - vehicle.near.distance))} m`
+          : " · keep driving");
+    }
     if (driveMode === "pune")
       el("routeStatus").textContent =
-        "Baner–Pashan Explorer · " +
+        path.nav.route.name +
+        " · " +
         Math.round((vehicle.near.distance / path.length) * 100) +
         "% · " +
         (cityData.manifest.elevation.kind === "procedural-fallback"
@@ -932,9 +1051,14 @@ window.wanderlane = {
   get state() {
     return {
       seed,
+      switching,
       frameMs,
       driveMode,
       settlementBuildings: world.settlementCount ?? 0,
+      cityPlaces: world.places ?? [],
+      cityDistrict: path.urban
+        ? cityDistrict(vehicle.near.distance).name
+        : null,
       season,
       city:
         driveMode === "pune"

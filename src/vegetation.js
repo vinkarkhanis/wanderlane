@@ -105,7 +105,7 @@ function leafTexture(pine = false) {
   ctx.moveTo(128, 225);
   ctx.bezierCurveTo(116, 160, 149, 95, 128, 32);
   ctx.stroke();
-  for (let i = 0; i < (pine ? 130 : 54); i++) {
+  for (let i = 0; i < (pine ? 130 : 100); i++) {
     const angle = r() * Math.PI * 2,
       rad = Math.sqrt(r()),
       x = 128 + Math.cos(angle) * rad * 99,
@@ -322,7 +322,7 @@ export function vegetationResources(biome, wind) {
     pine = biome === "snow";
   r.leafTexture = leafTexture(pine);
   r.barkTexture = barkTexture();
-  const leafColor = biome === "canyon" ? 0xa2a079 : pine ? 0x8baba0 : 0xa9bc7c;
+  const leafColor = biome === "canyon" ? 0xa2a079 : pine ? 0x8baba0 : 0x75995a;
   r.leaf = new THREE.MeshStandardMaterial({
     map: r.leafTexture,
     color: leafColor,

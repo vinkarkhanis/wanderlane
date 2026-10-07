@@ -1,4 +1,5 @@
 import { PUNE_FORK } from "./puneJourney.js";
+import { cityDistrict, nearbyCityPlaces } from "./endlessCityPlaces.js";
 
 export class CityJourneyMap {
   constructor() {
@@ -9,6 +10,7 @@ export class CityJourneyMap {
   update(path, v, trip, visible) {
     this.panel.hidden = !visible;
     if (!visible) return;
+    if (path.urban) return this.updateEndlessCity(path, v);
     const c = this.ctx,
       scale = 0.65,
       cx = 100,
@@ -31,8 +33,9 @@ export class CityJourneyMap {
       draw(r, "#526968", Math.max(1.4, r.width * scale * 0.45));
     for (const r of path.routeGrid.query(v.x, v.z, 180)) draw(r, "#dec596", 3);
     c.setLineDash([3, 4]);
-    const other =
-      path.journeyChoice === "detour"
+    const other = path.nav.exploration
+      ? []
+      : path.journeyChoice === "detour"
         ? path.nav.originalRoute.edges
             .slice(PUNE_FORK.from, PUNE_FORK.to)
             .map((e) => e.road)
@@ -64,11 +67,62 @@ export class CityJourneyMap {
     c.font = "10px Arial";
     c.textAlign = "left";
     c.fillText("N ↑", 9, 14);
-    document.getElementById("journeyMapLabel").textContent =
-      trip?.status === "completed"
+    document.getElementById("journeyMapLabel").textContent = path.nav
+      .exploration
+      ? path.nav.route.name
+      : trip?.status === "completed"
         ? "Parked · take a moment"
         : path.journeyChoice === "detour"
           ? "Wakeshwar Road detour"
           : "Main route";
+  }
+  updateEndlessCity(path, v) {
+    const c = this.ctx,
+      scale = 0.13;
+    const point = (x, z) => [100 + (x - v.x) * scale, 85 + (z - v.z) * scale];
+    c.clearRect(0, 0, 200, 160);
+    c.fillStyle = "#183235";
+    c.fillRect(0, 0, 200, 160);
+    c.strokeStyle = "#dec596";
+    c.lineWidth = 4;
+    c.beginPath();
+    for (let s = v.near.distance - 650; s <= v.near.distance + 650; s += 10) {
+      const p = path.sampleAtDistance(s);
+      const q = point(p.x, p.z);
+      if (s === v.near.distance - 650) c.moveTo(...q);
+      else c.lineTo(...q);
+    }
+    c.stroke();
+    c.font = "bold 9px Arial";
+    c.textAlign = "center";
+    for (const p of nearbyCityPlaces(path, v.near.distance, 620)) {
+      const [x, z] = point(p.x, p.z);
+      if (z < 24 || z > 137) continue;
+      c.fillStyle =
+        p.kind === "lake"
+          ? "#72bed0"
+          : p.kind === "hills" || p.kind === "park"
+            ? "#96c18a"
+            : "#f2ce88";
+      c.beginPath();
+      c.arc(x, z, p.kind === "lake" ? 8 : 4, 0, Math.PI * 2);
+      c.fill();
+      const label = p.short;
+      const lx = Math.max(
+        c.measureText(label).width / 2 + 4,
+        Math.min(196 - c.measureText(label).width / 2, x),
+      );
+      c.fillText(label, lx, z - 10);
+    }
+    c.fillStyle = "#f6f3dc";
+    c.beginPath();
+    c.arc(100, 85, 3, 0, Math.PI * 2);
+    c.fill();
+    c.textAlign = "left";
+    c.fillStyle = "#afc5ba";
+    c.fillText("N ↑  · endless city", 9, 14);
+    document.getElementById("journeyMapLabel").textContent = cityDistrict(
+      v.near.distance,
+    ).name;
   }
 }

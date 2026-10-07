@@ -4,6 +4,18 @@ export function landuseFromOSM(osm, report) {
     .filter((p) => !p.tags.building)
     .map((p) => ({
       ...p,
+      terrainClass:
+        p.tags.natural === "wood" || p.tags.landuse === "forest"
+          ? "woodland"
+          : ["grassland", "scrub", "heath"].includes(p.tags.natural)
+            ? "meadow"
+            : ["farmland", "meadow", "orchard"].includes(p.tags.landuse)
+              ? "fields"
+              : ["bare_rock", "scree", "rock"].includes(p.tags.natural)
+                ? "rock"
+                : p.tags.landuse === "retail"
+                  ? "retail"
+                  : "urban",
       kind:
         p.tags.natural === "water" ||
         p.tags.water ||
@@ -66,9 +78,18 @@ export function buildingsFromOSM(osm, graph, land, elevation, config, report) {
         (a, c) => Math.imul(a ^ c.charCodeAt(0), 16777619) >>> 0,
         config.seed,
       );
+    const mall =
+      t.shop === "mall" ||
+      osm.points.some(
+        (n) =>
+          n.tags.shop === "mall" &&
+          inside(n.p, p.outer) &&
+          !p.holes.some((h) => inside(n.p, h)),
+      );
     const type = t.building,
-      style =
-        type === "warehouse" || type === "industrial"
+      style = mall
+        ? "mall"
+        : type === "warehouse" || type === "industrial"
           ? "warehouse"
           : type === "school" || t.amenity
             ? "institution"
@@ -84,13 +105,15 @@ export function buildingsFromOSM(osm, graph, land, elevation, config, report) {
                       ? "apartments"
                       : "home";
     const fallback =
-      style === "tower"
-        ? 6 + (hash % 7)
-        : style === "apartments"
-          ? 3 + (hash % 4)
-          : style === "warehouse"
-            ? 2
-            : 1 + (hash % 3);
+      style === "mall"
+        ? 3 + (hash % 2)
+        : style === "tower"
+          ? 6 + (hash % 7)
+          : style === "apartments"
+            ? 3 + (hash % 4)
+            : style === "warehouse"
+              ? 2
+              : 1 + (hash % 3);
     const height = round(
       Math.max(
         2.8,
@@ -108,6 +131,12 @@ export function buildingsFromOSM(osm, graph, land, elevation, config, report) {
     buildings.push({
       ...p,
       height,
+      mallName: mall
+        ? t.name ||
+          osm.points.find((n) => n.tags.shop === "mall" && inside(n.p, p.outer))
+            ?.tags.name ||
+          "Shopping centre"
+        : undefined,
       style,
       y,
       variant: hash % 4,

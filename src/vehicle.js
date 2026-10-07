@@ -152,7 +152,7 @@ export class Vehicle {
       grip = road ? 1 : biome === "snow" ? 0.48 : 0.65;
     const manual = (input.left ? 1 : 0) - (input.right ? 1 : 0);
     let steerTarget = manual,
-      goal = this.path.city ? 8 : PHYS.cruise;
+      goal = this.path.city ? 8 : this.path.urban ? 12 : PHYS.cruise;
     if (auto) {
       const look = this.path.city
           ? 4 + Math.abs(this.speed) * 0.55

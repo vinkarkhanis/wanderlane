@@ -1,5 +1,6 @@
 import { ROAD } from "./config.js";
 import { hashSeed, random } from "./random.js";
+import { cityRoadRise } from "./city/endlessCityPlaces.js";
 // Bounded arc-length integration table. Monotonic Z prevents self-intersections.
 // Harmonics repeat after 32.768 km; streamed geometry has no terminal road end.
 export class RoadPath {
@@ -39,15 +40,18 @@ export class RoadPath {
   }
   height(s) {
     return (
-      3.5 * Math.sin(s * 0.003 + this.phase[2]) + 1.2 * Math.sin(s * 0.009)
+      3.5 * Math.sin(s * 0.003 + this.phase[2]) +
+      1.2 * Math.sin(s * 0.009) +
+      (this.urban ? cityRoadRise(s) : 0)
     );
   }
   sampleAtDistance(s, out = {}) {
     const w = this.wave(s),
       dz = Math.sqrt(1 - w.dx * w.dx),
-      dy =
-        0.0105 * Math.cos(s * 0.003 + this.phase[2]) +
-        0.0108 * Math.cos(s * 0.009);
+      dy = this.urban
+        ? this.height(s + 0.5) - this.height(s - 0.5)
+        : 0.0105 * Math.cos(s * 0.003 + this.phase[2]) +
+          0.0108 * Math.cos(s * 0.009);
     Object.assign(out, {
       distance: s,
       x: w.x,
@@ -116,6 +120,7 @@ export class RoadPath {
     return out;
   }
   hasRail(s, biome) {
+    if (this.urban) return false;
     return (
       biome === "canyon" || Math.abs(this.getCurvatureAtDistance(s)) > 0.0055
     );

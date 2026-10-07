@@ -1,15 +1,27 @@
 import { ROAD } from "./config.js";
+import { cityDistrict, reservedCityParcel } from "./city/endlessCityPlaces.js";
 
 export const settlementChunk = (index) => ((index % 8) + 8) % 8 === 0;
 export function settlementPlan(path, index, heightAt) {
-  if (!settlementChunk(index)) return [];
+  if (!path.urban && !settlementChunk(index)) return [];
   const result = [];
-  for (const d of [30, 62, 94, 126])
+  for (const d of path.urban
+    ? [14, 34, 54, 74, 94, 114, 134, 154]
+    : [30, 62, 94, 126])
     for (const side of [-1, 1]) {
       const s = index * ROAD.chunk + d,
         q = path.sampleAtDistance(s);
-      const x = q.x + q.nx * 15 * side,
-        z = q.z + q.nz * 15 * side;
+      const district = path.urban ? cityDistrict(s) : null;
+      if (
+        path.urban &&
+        (reservedCityParcel(path, s, side) ||
+          (((Math.floor(s / 20) * 7 + (side === 1 ? 3 : 0)) % 10) + 10) % 10 >=
+            district.density * 10)
+      )
+        continue;
+      const setback = path.urban ? 13 : 15;
+      const x = q.x + q.nx * setback * side,
+        z = q.z + q.nz * setback * side;
       const tx = q.tx,
         tz = q.tz,
         nx = -q.nx * side,
@@ -43,7 +55,13 @@ export function settlementPlan(path, index, heightAt) {
         base: Math.min(...heights),
         width: 9,
         depth: 8,
-        height: seed % 3 === 0 ? 9 : 6,
+        height: path.urban
+          ? district.id === "market" || district.id === "hotel"
+            ? 9 + (seed % 6) * 3
+            : 6 + (seed % 3) * 3
+          : seed % 3 === 0
+            ? 9
+            : 6,
         seed,
         s,
         retail: seed % 2 === 0,
