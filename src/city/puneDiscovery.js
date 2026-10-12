@@ -58,6 +58,7 @@ export class DiscoveryJournal {
     this.drives = new Map();
     this.scenes = new Set();
     this.postcards = new Set();
+    this.photos = new Map();
     try {
       this.storage = storage ?? globalThis.localStorage;
       const saved = JSON.parse(
@@ -69,9 +70,12 @@ export class DiscoveryJournal {
           12,
         ))
           if (
-            ["evening-chai-run", "baner-evening", "monsoon-pashan"].includes(
-              d?.id,
-            ) &&
+            [
+              "evening-chai-run",
+              "baner-evening",
+              "monsoon-pashan",
+              "flower-delivery",
+            ].includes(d?.id) &&
             typeof d.name === "string" &&
             ["Smooth", "Mostly smooth", "Eventful"].includes(d.quality)
           )
@@ -83,8 +87,34 @@ export class DiscoveryJournal {
         for (const id of Array.isArray(saved.scenes) ? saved.scenes : [])
           if (STREET_SCENES.some((s) => s.id === id)) this.scenes.add(id);
         for (const id of Array.isArray(saved.postcards) ? saved.postcards : [])
-          if (["sandhya-postcard", ...Object.keys(JOURNEY_PLACES)].includes(id))
+          if (
+            [
+              "sandhya-postcard",
+              "flower-delivery",
+              ...Object.keys(JOURNEY_PLACES),
+            ].includes(id)
+          )
             this.postcards.add(id);
+        for (const photo of (Array.isArray(saved.photos)
+          ? saved.photos
+          : []
+        ).slice(0, 4))
+          if (
+            this.postcards.has(photo?.id) &&
+            typeof photo.image === "string" &&
+            /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(photo.image) &&
+            photo.image.length < 160000
+          )
+            this.photos.set(photo.id, {
+              id: photo.id,
+              image: photo.image,
+              ...Object.fromEntries(
+                ["label", "vehicle", "weather", "route"].map((k) => [
+                  k,
+                  String(photo[k] ?? "").slice(0, 100),
+                ]),
+              ),
+            });
       }
     } catch {
       /* A blocked or damaged store still permits a visit journal. */
@@ -99,6 +129,7 @@ export class DiscoveryJournal {
           drives: [...this.drives.values()],
           scenes: [...this.scenes],
           postcards: [...this.postcards],
+          photos: [...this.photos.values()],
         }),
       );
     } catch {}
@@ -117,8 +148,14 @@ export class DiscoveryJournal {
       this.save();
     }
   }
-  postcard(id) {
+  postcard(id, photo) {
     this.postcards.add(id);
+    if (photo) {
+      this.photos.delete(id);
+      this.photos.set(id, { id, ...photo });
+      while (this.photos.size > 4)
+        this.photos.delete(this.photos.keys().next().value);
+    }
     this.save();
   }
   get snapshot() {
@@ -130,6 +167,7 @@ export class DiscoveryJournal {
         provenance: "Fictional local-style scene",
       })),
       postcards: [...this.postcards],
+      photos: [...this.photos.values()],
     };
   }
 }

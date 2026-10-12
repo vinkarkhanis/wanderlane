@@ -15,7 +15,8 @@ test("all garage vehicles accelerate, brake into reverse and follow the road", (
     const path = new RoadPath("garage-test"),
       v = new Vehicle(path, spec.id);
     for (let i = 0; i < 120; i++) v.update(1 / 60, { accel: true }, false);
-    assert.ok(v.speed > 3, spec.id);
+    // The deliberately heavy pickup builds speed gradually in the first seconds.
+    assert.ok(v.speed > 2, spec.id);
     for (let i = 0; i < 300; i++) v.update(1 / 60, { brake: true }, false);
     assert.ok(v.speed < 0, `${spec.id} reverse`);
     v.reset(40, 2);

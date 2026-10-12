@@ -10,6 +10,10 @@ const fields = [
   "steer",
   "wheelAngle",
   "speed",
+  "bodyRoll",
+  "acceleration",
+  "lateralAcceleration",
+  "suspensionOffset",
 ];
 // Render one physics tick behind: every display refresh gets a continuous pose,
 // without predicting collisions or feeding visual smoothing back into physics.
@@ -44,6 +48,7 @@ export class VehiclePose {
         return before + (height - before) * alpha;
       }) ?? null;
     out.auto = vehicle.auto;
+    out.spec = vehicle.spec;
     out.flight = vehicle.flight;
     return out;
   }

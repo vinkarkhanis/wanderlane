@@ -37,7 +37,7 @@ export class CityTripUI {
     };
     const active = s.status === "active",
       done = s.status === "completed";
-    const arrival = active && s.arrival && s.finalObjective && s.remaining < 70;
+    const arrival = active && s.arrival && s.stopping && s.stopRemaining < 70;
     this.panel.dataset.status = s.status;
     text(
       "tripDirection",
@@ -82,7 +82,9 @@ export class CityTripUI {
     text(
       "tripObjective",
       done
-        ? "Arrived · Take a moment"
+        ? s.cargo === "delivered"
+          ? "Flowers delivered · Thank you"
+          : "Arrived · Take a moment"
         : active
           ? s.objectiveLabel
           : s.description,
@@ -90,9 +92,9 @@ export class CityTripUI {
     text(
       "tripGuidance",
       done
-        ? "Chai is ready. Save a postcard of your stop."
+        ? s.completion
         : active
-          ? s.guidance || `Continue on ${s.road || "the local road"}`
+          ? `${s.cargo === "awaiting pickup" && !arrival ? "Collect flowers at the marked Baner bay. " : ""}${s.guidance || `Continue on ${s.road || "the local road"}`}`
           : `${(s.distance / 1000).toFixed(1)} km · Manual or auto-drive`,
     );
     text(
@@ -101,8 +103,10 @@ export class CityTripUI {
         ? `${Math.floor(s.elapsed / 60)}m ${Math.floor(s.elapsed % 60)}s · ${s.quality} · ${s.reason}`
         : active
           ? arrival
-            ? "Your chai stop · park here for 2 seconds"
-            : `Chai stop · ${s.remaining >= 1000 ? (s.remaining / 1000).toFixed(1) + " km" : Math.round(s.remaining) + " m"} remaining`
+            ? s.cargo === "awaiting pickup"
+              ? "Collect flowers · stay parked for 2 seconds"
+              : `${s.destination} · park here for 2 seconds`
+            : `${s.cargo === "onboard" ? "Flowers onboard · " : ""}${s.destination} · ${s.remaining >= 1000 ? (s.remaining / 1000).toFixed(1) + " km" : Math.round(s.remaining) + " m"} remaining`
           : "Follow the road. Take the long way.",
     );
     text("tripMarathi", active ? s.marathi : "");

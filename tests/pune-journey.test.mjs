@@ -137,6 +137,7 @@ test("journal persists discoveries, rejects damaged data, and works without stor
     drives: [],
     scenes: [],
     postcards: [],
+    photos: [],
   });
   const blocked = new DiscoveryJournal({
     getItem() {

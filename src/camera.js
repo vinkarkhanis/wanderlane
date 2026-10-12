@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { CAR_ANCHORS } from "./carGeometry.js";
-import { CAMERA, damp, angleDelta } from "./config.js";
+import { CAMERA, damp, angleDelta, clamp } from "./config.js";
 export class CameraRig {
   constructor() {
     this.cam = new THREE.PerspectiveCamera(
@@ -18,6 +18,32 @@ export class CameraRig {
   }
   update(v, dt, reduced = false, car = null) {
     dt = Math.max(0, Math.min(dt, 0.1));
+    const profile = v.spec?.ride;
+    const amount =
+      reduced || v.flight !== "ground" ? 0 : (profile?.camera ?? 0);
+    if (this.snap || this.model !== v.spec?.id || reduced) {
+      this.sway = this.push = this.bump = 0;
+      this.model = v.spec?.id;
+    }
+    this.sway = damp(
+      this.sway || 0,
+      clamp((v.lateralAcceleration || 0) * 0.025 * amount, -0.16, 0.16),
+      4,
+      dt,
+    );
+    this.push = damp(
+      this.push || 0,
+      clamp((v.acceleration || 0) * 0.012 * amount, -0.08, 0.08),
+      4,
+      dt,
+    );
+    this.bump = damp(
+      this.bump || 0,
+      clamp((v.suspensionOffset || 0) * amount, -0.04, 0.04),
+      7,
+      dt,
+    );
+    this.response = { sway: this.sway, push: this.push, bump: this.bump };
     this.height = this.snap
       ? v.y
       : damp(this.height, v.y, reduced ? 3 : CAMERA.vertical, dt);
@@ -28,9 +54,13 @@ export class CameraRig {
       ? v.heading
       : this.heading +
         angleDelta(v.heading, this.heading) *
-          (1 - Math.exp(-CAMERA.horizontal * dt));
+          (1 - Math.exp(-(profile?.lag ?? CAMERA.horizontal) * dt));
     const cockpit = this.mode === 3;
-    const desiredFov = cockpit ? 72 : 58;
+    const desiredFov = cockpit
+      ? v.spec?.kind === "bike"
+        ? 80
+        : 72
+      : (profile?.fov ?? 58);
     if (this.cam.fov !== desiredFov) {
       this.cam.fov = desiredFov;
       this.cam.updateProjectionMatrix();
@@ -42,7 +72,11 @@ export class CameraRig {
         .applyMatrix4(car.body.matrixWorld);
       const anchor = car.cockpitAnchor || CAR_ANCHORS.cockpit;
       this.target
-        .set(anchor[0], anchor[1] - 0.06, 25)
+        .set(
+          anchor[0] + this.sway,
+          anchor[1] - 0.06 + this.push + this.bump,
+          25,
+        )
         .applyMatrix4(car.body.matrixWorld);
       this.cam.up.set(0, 1, 0).transformDirection(car.body.matrixWorld);
       this.cam.lookAt(this.target);
@@ -55,11 +89,11 @@ export class CameraRig {
     const wide = this.mode === 2,
       hood = this.mode === 1,
       back =
-        (wide ? 13 : 8.2) +
+        (wide ? 13 : (profile?.back ?? 8.2)) +
         (car?.cameraHeight || 0) +
         this.aerialMix * (wide ? 11 : 7.8),
       up =
-        (wide ? 5.7 : 3.4) +
+        (wide ? 5.7 : (profile?.height ?? 3.4)) +
         (car?.cameraHeight || 0) +
         this.aerialMix * (wide ? 6.3 : 3.6),
       s = Math.sin(hood ? v.heading : this.heading),
@@ -77,6 +111,10 @@ export class CameraRig {
         this.pitch * (reduced ? 3 : 8),
       v.z + c * 18,
     );
+    this.position.y += this.bump;
+    this.target.x += c * this.sway;
+    this.target.z -= s * this.sway;
+    this.target.y += this.push;
     // Smooth the orbit, not world translation: car and camera must advance on
     // the same render clock, otherwise their different delays create vibration.
     this.cam.position.copy(this.position);

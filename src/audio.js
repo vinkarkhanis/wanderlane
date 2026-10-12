@@ -1,4 +1,6 @@
 import { DriveRadio } from "./driveRadio.js";
+import { engineVoice } from "./vehicleFeel.js";
+import { VEHICLES } from "./vehicleCatalog.js";
 // Original Web Audio synthesis. No external sound files.
 export class AudioSystem {
   constructor() {
@@ -24,7 +26,17 @@ export class AudioSystem {
         this.gain.gain.value = 0;
         this.gain.connect(c.destination);
         this.motor = c.createOscillator();
+        this.engineWaves = Object.fromEntries(
+          VEHICLES.map((v) => [
+            v.id,
+            c.createPeriodicWave(
+              new Float32Array(v.sound.harmonics.length),
+              new Float32Array(v.sound.harmonics),
+            ),
+          ]),
+        );
         this.motor.type = "sine";
+        this.engineModel = null;
         this.motorGain = c.createGain();
         this.motor.connect(this.motorGain).connect(this.gain);
         this.motor.start();
@@ -52,6 +64,22 @@ export class AudioSystem {
           .connect(this.noiseGain)
           .connect(this.gain);
         this.noise.start();
+        const rainBuffer = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
+        const rainData = rainBuffer.getChannelData(0);
+        for (let i = 0; i < rainData.length; i++)
+          rainData[i] = Math.random() * 2 - 1;
+        this.rainSource = c.createBufferSource();
+        this.rainSource.buffer = rainBuffer;
+        this.rainSource.loop = true;
+        this.rainFilter = c.createBiquadFilter();
+        this.rainFilter.type = "lowpass";
+        this.rainGain = c.createGain();
+        this.rainGain.gain.value = 0;
+        this.rainSource
+          .connect(this.rainFilter)
+          .connect(this.rainGain)
+          .connect(this.gain);
+        this.rainSource.start();
         this.windFilter = c.createBiquadFilter();
         this.windFilter.type = "lowpass";
         this.windGain = c.createGain();
@@ -59,6 +87,15 @@ export class AudioSystem {
         this.noise
           .connect(this.windFilter)
           .connect(this.windGain)
+          .connect(this.gain);
+        this.engineFilter = c.createBiquadFilter();
+        this.engineFilter.type = "bandpass";
+        this.engineFilter.Q.value = 0.8;
+        this.engineGrain = c.createGain();
+        this.engineGrain.gain.value = 0;
+        this.noise
+          .connect(this.engineFilter)
+          .connect(this.engineGrain)
           .connect(this.gain);
         this.radio = new DriveRadio(c, this.gain);
         this.ambient = c.createOscillator();
@@ -96,11 +133,16 @@ export class AudioSystem {
           return { oscillator, gain, ratio };
         });
         this.nodes = [
+          this.rainSource,
+          this.rainFilter,
+          this.rainGain,
           this.gain,
           this.motorBody,
           this.motorBodyGain,
           this.windFilter,
           this.windGain,
+          this.engineFilter,
+          this.engineGrain,
           ...this.radio.nodes,
           this.motor,
           this.motorGain,
@@ -144,19 +186,37 @@ export class AudioSystem {
       gain.gain.setValueAtTime(0, t + 0.7);
     }
   }
-  update(v, night, paused, city = null) {
+  update(v, night, paused, city = null, weather = {}) {
     if (!this.ctx || !this.nodes?.length) return;
     const t = this.ctx.currentTime,
       ramp = (param, value) => param.setTargetAtTime(value, t, 0.12);
     ramp(this.gain.gain, this.muted || paused ? 0 : this.master);
-    this.radio.update(this.musicMood, this.music, !paused && !this.muted);
-    ramp(this.motor.frequency, 38 + Math.abs(v.speed) * 2.7 + v.throttle * 12);
+    ramp(this.rainFilter.frequency, weather.cockpit ? 1700 : 5200);
     ramp(
-      this.motorBody.frequency,
-      76 + Math.abs(v.speed) * 5.4 + v.throttle * 24,
+      this.rainGain.gain,
+      weather.rain
+        ? this.ambience *
+            (weather.heavy ? 1.65 : 0.7) *
+            ((weather.cockpit ? 0.075 : 0.055) +
+              (v.flight === "ground" && v.surface === "Asphalt"
+                ? Math.min(0.045, Math.abs(v.speed) * 0.002)
+                : 0))
+        : 0,
     );
-    ramp(this.motorBodyGain.gain, this.engine * (0.018 + v.throttle * 0.045));
-    ramp(this.motorGain.gain, this.engine * (0.08 + v.throttle * 0.22));
+    this.radio.update(this.musicMood, this.music, !paused && !this.muted);
+    const voice = engineVoice(v.spec, v.speed, v.throttle);
+    const engineModel = v.spec?.id ?? "gt";
+    if (this.engineModel !== engineModel) {
+      this.motor.setPeriodicWave(this.engineWaves[engineModel]);
+      this.engineModel = engineModel;
+    }
+    ramp(this.motor.frequency, voice.frequency);
+    ramp(this.motorBody.frequency, voice.harmonic);
+    ramp(this.motorBodyGain.gain, this.engine * voice.bodyGain);
+    ramp(this.motorGain.gain, this.engine * voice.fundamentalGain);
+    ramp(this.engineFilter.frequency, voice.filter);
+    ramp(this.engineGrain.gain, this.engine * voice.grainGain);
+    this.voice = { model: v.spec?.id ?? "gt", ...voice };
     ramp(this.filter.frequency, 180 + Math.abs(v.speed) * 24);
     ramp(this.windFilter.frequency, 350 + Math.abs(v.speed) * 18);
     ramp(

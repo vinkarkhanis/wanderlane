@@ -504,13 +504,7 @@ class GarageVehicle {
     this.group.position.set(v.x, v.y, v.z);
     this.group.rotation.set(0, v.heading, 0);
     this.body.rotation.x = -v.pitch + (reduced ? 0 : v.squat || 0);
-    const lean =
-      this.spec.kind === "bike"
-        ? Math.max(
-            -0.35,
-            Math.min(0.35, -(v.steer || 0) * Math.abs(v.speed) * 0.025),
-          )
-        : -(v.steer || 0) * Math.min(Math.abs(v.speed) * 0.003, 0.06);
+    const lean = v.bodyRoll || 0;
     this.body.rotation.z = (v.roll || 0) + (reduced ? 0 : lean);
     for (const { pivot, contact } of this.wheels)
       pivot.position.y =

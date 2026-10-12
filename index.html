@@ -69,6 +69,9 @@
             Evening Chai Run · original journey
           </option>
           <option value="baner-evening">Baner Evening Drive · 2.6 km</option>
+          <option value="flower-delivery">
+            Monsoon Flower Delivery · a small story
+          </option>
           <option value="monsoon-pashan">Monsoon Pashan Drive · 2.2 km</option>
         </select>
       </label>
@@ -108,7 +111,8 @@
         <button id="postcardBtn" hidden>Take a postcard</button>
       </div>
       <details id="discoveryJournal">
-        <summary>Discovery journal</summary>
+        <summary>Travel scrapbook</summary>
+        <div id="journalPhotos"></div>
         <p id="journalEntries">
           Take the long way. Discoveries are saved on this device.
         </p>
@@ -198,14 +202,16 @@
             >Drive Mode<select id="driveMode">
               <option value="endless">Endless Drive</option>
               <option value="endless-city">Endless City · Pune inspired</option>
-                <option value="pune" selected>Pune & outskirts</option>
+              <option value="pune" selected>Pune & outskirts</option>
             </select></label
           >
           <div id="puneOptions" hidden>
             <label
               >Pune Route<select id="puneRoute">
-                  <option value="pilot">Baner–Pashan Explorer · original journeys</option>
-                </select></label
+                <option value="pilot">
+                  Baner–Pashan Explorer · original journeys
+                </option>
+              </select></label
             ><label
               >Pune Season<select id="puneSeason">
                 <option>Summer</option>
@@ -215,15 +221,29 @@
             >
           </div>
           <div id="endlessCityOptions" hidden>
-            <label>City starting area<select id="cityArea">
-              <option value="market">Galleria Quarter · mall & hotel</option>
-              <option value="lake">Willow Lake · gardens & promenade</option>
-              <option value="hills">Greenridge Hills · scenic lookout</option>
-              <option value="temple">Lotus Temple · garden quarter</option>
-              <option value="hotel">Skyline Grand · hotel district</option>
-              <option value="avenue">Garden Avenue · park</option>
-            </select></label>
+            <label
+              >City starting area<select id="cityArea">
+                <option value="market">Galleria Quarter · mall & hotel</option>
+                <option value="lake">Willow Lake · gardens & promenade</option>
+                <option value="hills">Greenridge Hills · scenic lookout</option>
+                <option value="temple">Lotus Temple · garden quarter</option>
+                <option value="hotel">Skyline Grand · hotel district</option>
+                <option value="avenue">Garden Avenue · park</option>
+              </select></label
+            >
           </div>
+          <label
+            >Weather<select id="weather">
+              <option>Clear</option>
+              <option>Monsoon</option></select
+            ><small>Choose rain in any drive mode.</small></label
+          >
+          <label id="rainIntensityControl"
+            >Monsoon rain<select id="rainIntensity">
+              <option>Light</option>
+              <option selected>Heavy</option></select
+            ><small>Light showers or a dense monsoon downpour.</small></label
+          >
           <label
             >Graphics<select id="quality">
               <option>Low</option>

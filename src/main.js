@@ -1,6 +1,8 @@
 import { CityPath } from "./city/cityPath.js";
 import { CityWorld, SEASONS } from "./city/cityWorld.js";
 import { CityTraffic } from "./city/cityTraffic.js";
+import { flowerTrip, FLOWER_POSTCARD } from "./city/flowerDelivery.js";
+import { FlowerDeliveryView } from "./city/flowerDeliveryView.js";
 import { CityExperience, chaiTrip } from "./city/cityExperience.js";
 import {
   DiscoveryJournal,
@@ -37,6 +39,7 @@ import { Traffic, TRAFFIC } from "./traffic.js";
 import { Controls } from "./controls.js";
 import { AudioSystem } from "./audio.js";
 import { Particles } from "./particles.js";
+import { Monsoon } from "./monsoon.js";
 import { BIOMES, BIOME_KEYS } from "./biomes.js";
 import { COLORS, QUALITY } from "./config.js";
 import { loadSettings, saveSettings } from "./settings.js";
@@ -57,15 +60,19 @@ const scene = new THREE.Scene(),
   rig = new CameraRig(),
   env = new Environment(scene, renderer),
   audio = new AudioSystem(),
-  particles = new Particles(scene);
+  particles = new Particles(scene),
+  monsoon = new Monsoon(scene);
 const journal = new DiscoveryJournal();
+const flowerView = new FlowerDeliveryView(scene);
 const journeyMap = new CityJourneyMap();
 let endlessLane = 2;
 let cityActivityIntroduced = saved.cityActivityVersion === 1;
 let experience = null,
   signals = null;
 let driveMode = "endless",
-  season = "Summer",
+  season = SEASONS.includes(saved.season) ? saved.season : "Summer",
+  endlessWeather = saved.endlessWeather === "Monsoon" ? "Monsoon" : "Clear",
+  rainIntensity = saved.rainIntensity === "Light" ? "Light" : "Heavy",
   cityData = null,
   switching = false;
 let seed = String(saved.seed || "aster-2026"),
@@ -325,6 +332,9 @@ function persist() {
     driveMode,
     seed,
     quality,
+    endlessWeather,
+    rainIntensity,
+    season,
     reduced,
     shadows: el("shadows").value,
     master: audio.master,
@@ -391,6 +401,17 @@ function returnToRoad() {
   toast("Back on the road. Take your time.");
 }
 function updateLabels() {
+  el("rainIntensity").value = rainIntensity;
+  el("rainIntensityControl").hidden = !(driveMode === "pune"
+    ? season === "Monsoon"
+    : endlessWeather === "Monsoon");
+  el("weather").value =
+    driveMode === "pune"
+      ? season === "Monsoon"
+        ? "Monsoon"
+        : "Clear"
+      : endlessWeather;
+  el("puneSeason").value = season;
   el("puneRoute").disabled = switching || vehicle.flight !== "ground";
   el("vehicleName").textContent = vehicle.spec.name.toUpperCase();
   el("vehicleModel").disabled = switching || vehicle.flight !== "ground";
@@ -408,8 +429,10 @@ function updateLabels() {
     driveMode === "pune"
       ? "PUNE · " + season.toUpperCase()
       : driveMode === "endless-city"
-        ? "ENDLESS CITY · PUNE INSPIRED"
-        : biome.toUpperCase();
+        ? "ENDLESS CITY · PUNE INSPIRED" +
+          (endlessWeather === "Monsoon" ? " · MONSOON" : "")
+        : biome.toUpperCase() +
+          (endlessWeather === "Monsoon" ? " · MONSOON" : "");
   el("timeBtn").textContent = TIMES[env.mode];
   el("timeLabel").textContent = TIMES[env.mode].toUpperCase();
   el("autoBtn").textContent = auto ? "Auto drive" : "Manual";
@@ -521,7 +544,11 @@ function chooseDiscovery() {
   if (!experience) return;
   const id = el("discoveryDrive").value;
   experience.definition =
-    id === "evening-chai-run" ? chaiTrip(path) : discoveryTrip(path, id);
+    id === "flower-delivery"
+      ? flowerTrip(path)
+      : id === "evening-chai-run"
+        ? chaiTrip(path)
+        : discoveryTrip(path, id);
   experience.reset();
 }
 function attachJourneyDriving() {
@@ -562,9 +589,11 @@ function usePuneRoute(choice) {
   world.signals = signals;
   experience.path = path;
   experience.definition =
-    el("discoveryDrive").value === "evening-chai-run"
-      ? chaiTrip(path)
-      : discoveryTrip(path, el("discoveryDrive").value);
+    el("discoveryDrive").value === "flower-delivery"
+      ? flowerTrip(path)
+      : el("discoveryDrive").value === "evening-chai-run"
+        ? chaiTrip(path)
+        : discoveryTrip(path, el("discoveryDrive").value);
   if (active) experience.last = path.journeyDistance(lastCanonical);
   else experience.reset();
   attachJourneyDriving();
@@ -646,7 +675,7 @@ function canPostcard() {
   const p = currentPostcard();
   return Math.hypot(vehicle.x - p.x, vehicle.z - p.z) < (p.radius ?? 25);
 }
-el("postcardBtn").addEventListener("click", () => {
+el("postcardBtn").addEventListener("click", async () => {
   if (!canPostcard()) return;
   controls.clear();
   auto = false;
@@ -669,7 +698,18 @@ el("postcardBtn").addEventListener("click", () => {
   el("postcardImage").alt = postcard.label;
   el("postcardDownload").href = el("postcardImage").src;
   el("postcardDownload").download = `wanderlane-${postcard.id}.png`;
-  journal.postcard(postcard.id);
+  await el("postcardImage").decode();
+  const thumbnail = document.createElement("canvas");
+  thumbnail.width = 400;
+  thumbnail.height = 293;
+  thumbnail.getContext("2d").drawImage(el("postcardImage"), 0, 0, 400, 293);
+  journal.postcard(postcard.id, {
+    image: thumbnail.toDataURL("image/jpeg", 0.7),
+    label: postcard.label,
+    vehicle: vehicle.spec.name,
+    weather: season,
+    route: path.journeyChoice,
+  });
   el("postcardDialog").showModal();
   updateLabels();
 });
@@ -760,10 +800,23 @@ el("vehicleModel").addEventListener("change", () => {
   toast(vehicle.spec.name + " ready. Resume to drive.");
 });
 el("driveMode").addEventListener("change", switchMode);
+el("weather").addEventListener("change", () => {
+  if (driveMode === "pune") {
+    season = el("weather").value === "Monsoon" ? "Monsoon" : "Summer";
+    world.setSeason(season);
+  } else endlessWeather = el("weather").value;
+  updateLabels();
+  persist();
+});
+el("rainIntensity").addEventListener("change", () => {
+  rainIntensity = el("rainIntensity").value;
+  persist();
+});
 el("puneSeason").addEventListener("change", () => {
   season = el("puneSeason").value;
   if (path.city) world.setSeason(season);
   updateLabels();
+  persist();
 });
 el("quality").addEventListener("change", setQuality);
 el("shadows").addEventListener("change", setShadows);
@@ -909,15 +962,29 @@ function loop(now) {
   );
   car.place(visual, reduced);
   flightView.update(vehicle, time, reduced);
+  flowerView.update(
+    driveMode === "pune" ? experience?.snapshot : null,
+    world,
+    car,
+    rig.mode,
+  );
   car.update(paused ? 0 : dt, visual.speed, env.night, vehicle.braking);
   updateWorld();
-  env.update(visual, dt, biome, time, reduced);
+  const raining =
+    driveMode === "pune" ? season === "Monsoon" : endlessWeather === "Monsoon";
+  const heavyRain = raining && rainIntensity === "Heavy";
+  env.update(visual, dt, biome, time, reduced, raining, heavyRain);
+  if (raining) {
+    scene.fog.far = heavyRain ? 190 : quality === "Low" ? 260 : 360;
+  }
   if (driveMode === "pune") {
-    scene.fog.far = season === "Monsoon" ? 360 : quality === "Low" ? 260 : 490;
-    if (season === "Monsoon") {
-      env.sun.intensity *= 0.65;
-      env.skyU.top.value.lerp(env.temp.setHex(0x84979b), 0.04);
-    }
+    scene.fog.far = heavyRain
+      ? 190
+      : quality === "Low"
+        ? 260
+        : season === "Monsoon"
+          ? 360
+          : 490;
     if (world.error) el("cityLoading").textContent = world.error;
     if (world.error) el("cityLoading").hidden = false;
     const b = path.bounds;
@@ -935,8 +1002,28 @@ function loop(now) {
   }
   for (const material of Object.values(world.res))
     if (material?.isMaterial) material.envMapIntensity = 0.5 - env.night * 0.44;
-  particles.update(visual, biome, env.night, time, reduced);
+  if (raining) world.res.asphalt.envMapIntensity = 0.4;
+  particles.update(visual, biome, env.night, time, reduced || raining);
   rig.update(visual, dt, reduced, car);
+  monsoon.update(visual, {
+    active: raining,
+    intensity: rainIntensity,
+    camera: rig.cam,
+    quality,
+    reduced,
+    paused,
+    dt,
+    car,
+    pixelRatio: renderer.getPixelRatio(),
+    path,
+    roadDistance: vehicle.near.distance,
+    night: env.night,
+    cockpit: rig.mode === 3,
+    enclosed: vehicle.spec.kind !== "bike",
+    grounded: vehicle.flight === "ground",
+    asphalt: vehicle.surface === "Asphalt",
+    world,
+  });
   audio.update(
     vehicle,
     env.night,
@@ -952,6 +1039,11 @@ function loop(now) {
           time: experience?.status === "active" ? experience.elapsed : time,
         }
       : null,
+    {
+      rain: raining,
+      heavy: heavyRain,
+      cockpit: rig.mode === 3 && vehicle.spec.kind !== "bike",
+    },
   );
   hudTime += dt;
   if (hudTime > 0.15) {
@@ -979,12 +1071,30 @@ function loop(now) {
         ...entries.scenes.map((s) => `${s.label} — ${s.provenance}`),
         ...entries.postcards.map(
           (id) =>
-            `${JOURNEY_PLACES[id]?.label ?? POSTCARD.label} · postcard collected`,
+            `${id === FLOWER_POSTCARD.id ? FLOWER_POSTCARD.label : (JOURNEY_PLACES[id]?.label ?? POSTCARD.label)} · postcard collected`,
         ),
       ].join("\n") ||
       "Take the long way. Discoveries are saved on this device.";
     if (el("journalEntries").textContent !== journalText)
       el("journalEntries").textContent = journalText;
+    const photoKey = JSON.stringify(entries.photos);
+    if (el("journalPhotos").dataset.key !== photoKey) {
+      el("journalPhotos").dataset.key = photoKey;
+      el("journalPhotos").replaceChildren(
+        ...entries.photos.map((photo) => {
+          const figure = document.createElement("figure"),
+            image = document.createElement("img"),
+            caption = document.createElement("figcaption");
+          image.src = photo.image;
+          image.alt = photo.label;
+          image.width = 200;
+          image.height = 147;
+          caption.textContent = `${photo.label} · ${photo.vehicle} · ${photo.weather} · ${photo.route === "detour" ? "Neighbourhood detour" : "Main road"}`;
+          figure.append(image, caption);
+          return figure;
+        }),
+      );
+    }
     tripUI.update(
       experience?.snapshot,
       started && !paused && driveMode === "pune" && !airborne,
@@ -1083,6 +1193,15 @@ window.wanderlane = {
       vehicleModel: selectedVehicle,
       vehicleName: vehicle.spec.name,
       vehicleBounds: vehicle.bounds,
+      drivingFeel: {
+        acceleration: vehicle.acceleration,
+        lateralAcceleration: vehicle.lateralAcceleration,
+        bodyRoll: vehicle.bodyRoll,
+        squat: vehicle.squat,
+        suspensionOffset: vehicle.suspensionOffset,
+        camera: rig.response,
+        engine: audio.voice,
+      },
       traffic: traffic.mode,
       collisions: traffic.collisions.snapshot,
       impact: {
@@ -1124,6 +1243,7 @@ window.wanderlane = {
         z: car.group.position.z,
       },
       cameraPosition: rig.cam.position.toArray(),
+      cameraFov: rig.cam.fov,
       cockpitVisible: car.cockpit.group.visible,
       steeringWheelAngle: car.cockpit.wheel.rotation.z,
       instrumentSpeed: car.cockpit.lastSpeed,
@@ -1132,6 +1252,12 @@ window.wanderlane = {
       musicMood: audio.musicMood,
       musicVolume: audio.music,
       audioNodes: audio.nodes?.length ?? 0,
+      weather: {
+        ...monsoon.snapshot,
+        rainGain: audio.rainGain?.gain.value ?? 0,
+        skyTop: env.skyU.top.value.getHexString(),
+        skyHorizon: env.skyU.bottom.value.getHexString(),
+      },
       arrivalCueCount: audio.arrivalCueCount ?? 0,
       quality,
       reduced,

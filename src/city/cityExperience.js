@@ -130,18 +130,30 @@ export class CityExperience {
     const outside =
       (v.near.surfaceDistance ?? Math.abs(v.near.offset ?? 0)) >
       (v.near.width ?? 7) / 2 + 2;
-    const arrival = this.definition.arrival;
+    const objectiveStop = this.definition.objectives[this.objectiveIndex]?.stop;
+    const arrival = objectiveStop ?? this.definition.arrival;
+    const stopDistance = objectiveStop
+      ? this.definition.objectives[this.objectiveIndex].distance
+      : this.definition.distance;
     const approaching =
       arrival &&
-      this.objectiveIndex === this.definition.objectives.length - 1 &&
-      this.highWater >= this.definition.distance - 70;
+      (objectiveStop ||
+        this.objectiveIndex === this.definition.objectives.length - 1) &&
+      this.highWater >= stopDistance - 70;
     this.arrivalDistance = arrival
       ? Math.hypot(v.x - arrival.x, v.z - arrival.z)
       : Infinity;
     const atBay = approaching && bayContains(arrival, v.x, v.z);
     const inApproach =
       approaching && this.arrivalDistance < 40 && v.near.routeGap < 14;
-    if (outside && !inApproach) {
+    const previous = this.definition.objectives[this.objectiveIndex - 1];
+    const leavingPickup =
+      previous?.stop &&
+      this.highWater <= previous.distance + 40 &&
+      Math.hypot(v.x - previous.stop.x, v.z - previous.stop.z) < 40 &&
+      v.near.routeGap < 14;
+    const inStopArea = inApproach || leavingPickup;
+    if (outside && !inStopArea) {
       this.offRoadTime += dt;
       if (!this.outside) this.routeDepartures++;
     }
@@ -186,6 +198,13 @@ export class CityExperience {
         atBay && Math.abs(v.speed) < 0.5 ? this.arrivalDwell + dt : 0;
       if (this.arrivalDwell >= 2) {
         this.objectiveIndex++;
+        if (objectiveStop) {
+          this.arrivalDwell = 0;
+          this.arrivalStage = "driving";
+          this.guidance =
+            "Flowers collected. Take your time on the road to Pashan.";
+          return;
+        }
         this.status = "completed";
         this.arrivalStage = "arrived";
         this.journal?.complete(this.snapshot);
@@ -198,7 +217,7 @@ export class CityExperience {
     // from the last earned distance; reverse travel must be driven back first.
     if (
       v.near.routeGap > 9 ||
-      (outside && !inApproach) ||
+      (outside && !inStopArea) ||
       Math.abs(delta) > Math.max(3, Math.abs(v.speed) * dt * 2 + 1)
     )
       return;
@@ -211,6 +230,7 @@ export class CityExperience {
     // Both earned distance and physical proximity are required to complete an objective.
     if (
       objective &&
+      !objective.stop &&
       !(
         arrival && this.objectiveIndex === this.definition.objectives.length - 1
       ) &&
@@ -232,13 +252,8 @@ export class CityExperience {
   }
   drivePosition(s, lane, out) {
     this.path.getLanePosition(s, lane, out);
-    const a = this.definition.arrival;
-    if (
-      !a ||
-      this.status !== "active" ||
-      this.objectiveIndex !== this.definition.objectives.length - 1
-    )
-      return out;
+    const a = this.currentStop;
+    if (!a || this.status !== "active" || !this.stopping) return out;
     const gap = signedDistance(s, a.s, this.path.length);
     if (gap > 80 || gap < -30) return out;
     const t = Math.min(1, Math.max(0, (80 - gap) / 60));
@@ -254,18 +269,25 @@ export class CityExperience {
     return out;
   }
   arrivalSpeedLimit(v) {
-    const a = this.definition.arrival;
-    if (
-      !a ||
-      this.status !== "active" ||
-      this.objectiveIndex !== this.definition.objectives.length - 1
-    )
-      return Infinity;
+    const a = this.currentStop;
+    if (!a || this.status !== "active" || !this.stopping) return Infinity;
     const gap = signedDistance(v.near.distance, a.s, this.path.length);
     if (gap > 80 || gap < -30) return Infinity;
     return Math.min(
       3,
       Math.sqrt(2.4 * Math.max(0, Math.hypot(v.x - a.x, v.z - a.z) - 0.8)),
+    );
+  }
+  get currentStop() {
+    return (
+      this.definition.objectives[this.objectiveIndex]?.stop ??
+      this.definition.arrival
+    );
+  }
+  get stopping() {
+    return (
+      !!this.definition.objectives[this.objectiveIndex]?.stop ||
+      this.objectiveIndex === this.definition.objectives.length - 1
     );
   }
   get snapshot() {
@@ -277,6 +299,22 @@ export class CityExperience {
       tripId: d.id,
       name: d.name,
       description: d.description,
+      destination: d.destination ?? "Chai stop",
+      completion:
+        d.completion ?? "Chai is ready. Save a postcard of your stop.",
+      cargo:
+        d.id === "flower-delivery"
+          ? this.status === "completed"
+            ? "delivered"
+            : this.objectiveIndex > 0
+              ? "onboard"
+              : "awaiting pickup"
+          : null,
+      stopping: this.stopping,
+      stopRemaining: Math.max(
+        0,
+        (o?.stop ? o.distance : d.distance) - this.highWater,
+      ),
       status: this.status,
       objectiveIndex: this.objectiveIndex,
       objectiveLabel: o?.label ?? "Arrived",
@@ -307,9 +345,9 @@ export class CityExperience {
       guidance: this.guidance,
       direction: this.direction,
       character: this.character,
-      arrival: d.arrival
+      arrival: this.currentStop
         ? {
-            ...d.arrival,
+            ...this.currentStop,
             distance: this.arrivalDistance,
             dwell: this.arrivalDwell,
             stage: this.arrivalStage,

@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:vehicle:feel": "node --test tests/vehicle-feel.test.js",
+    "test:vehicle:feel:browser": "node tests/vehicle-feel-browser.mjs",
+    "test:monsoon:browser": "node tests/monsoon-browser.mjs",
     "test:traffic:visibility:browser": "node tests/traffic-visibility-browser.mjs",
     "test:garage": "node --test tests/garage.test.js",
     "test:garage:browser": "node tests/garage-browser.mjs",
@@ -24,7 +27,7 @@
     "test:city:journey": "node tests/city-journey-browser.mjs",
     "test:city:input": "node tests/city-input-browser.mjs",
     "test:city:systems": "node tests/city-systems-browser.mjs",
-    "test": "node --test tests/driving.test.js tests/improvements.test.js tests/ride.test.js",
+    "test": "node --test tests/driving.test.js tests/improvements.test.js tests/ride.test.js tests/vehicle-feel.test.js",
     "test:ride:browser": "node tests/ride-browser.mjs",
     "test:improvements:browser": "node tests/improvements-browser.mjs",
     "serve": "python tools/serve.py",
@@ -44,7 +47,9 @@
     "build:site": "node tools/build.mjs --no-zip",
     "test:pune:browser": "node tests/pune-browser.mjs",
     "test:pune:world": "node tests/pune-world.mjs",
-    "test:pune:deployment": "node tests/pune-deployment.mjs"
+    "test:pune:deployment": "node tests/pune-deployment.mjs",
+    "test:flower:delivery": "node --test tests/flower-delivery.test.mjs",
+    "test:flower:delivery:browser": "node tests/flower-delivery-browser.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

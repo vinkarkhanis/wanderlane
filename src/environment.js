@@ -55,6 +55,8 @@ export class Environment {
     this.mode = 2;
     this.night = 0;
     this.temp = new THREE.Color();
+    this.rainTop = new THREE.Color(0x607780);
+    this.rainHorizon = new THREE.Color(0x9cabb0);
     this.skyU = {
       top: { value: new THREE.Color(PRESETS[2].top) },
       bottom: { value: new THREE.Color(PRESETS[2].horizon) },
@@ -166,13 +168,21 @@ export class Environment {
       this.clouds.add(cloud);
     }
   }
-  update(v, dt, biome, time, reduced) {
+  update(v, dt, biome, time, reduced, raining = false, heavyRain = false) {
     const p = PRESETS[this.mode],
       a = 1 - Math.exp(-1.25 * dt);
     this.sky.position.set(v.x, 0, v.z);
     this.skyObjects.position.set(v.x, 0, v.z);
-    this.skyU.top.value.lerp(this.temp.setHex(p.top), a);
-    this.skyU.bottom.value.lerp(this.temp.setHex(p.horizon), a);
+    this.rainTop.setHex(p.night ? 0x182936 : heavyRain ? 0x344b56 : 0x607780);
+    this.rainHorizon.setHex(p.night ? 0x344956 : heavyRain ? 0x748991 : 0x9cabb0);
+    this.skyU.top.value.lerp(
+      this.temp.setHex(p.top).lerp(this.rainTop, raining ? 0.9 : 0),
+      a,
+    );
+    this.skyU.bottom.value.lerp(
+      this.temp.setHex(p.horizon).lerp(this.rainHorizon, raining ? 0.9 : 0),
+      a,
+    );
     this.scene.fog.color.copy(this.skyU.bottom.value);
     this.scene.fog.far = damp(
       this.scene.fog.far,
@@ -187,7 +197,12 @@ export class Environment {
       dt,
     );
     this.sun.color.lerp(this.temp.setHex(p.sun), a);
-    this.sun.intensity = damp(this.sun.intensity, p.power, 1.25, dt);
+    this.sun.intensity = damp(
+      this.sun.intensity,
+      p.power * (heavyRain ? 0.32 : raining ? 0.65 : 1),
+      1.25,
+      dt,
+    );
     this.hemi.color.lerp(this.temp.setHex(p.hemi), a);
     this.hemi.intensity = damp(this.hemi.intensity, p.ambient, 1.25, dt);
     this.sun.position.x = v.x - 95;
@@ -201,9 +216,10 @@ export class Environment {
       1.25,
       dt,
     );
-    this.stars.material.opacity = this.night * 0.85;
-    this.moon.material.opacity = this.night;
+    this.stars.material.opacity = raining ? 0 : this.night * 0.85;
+    this.moon.material.opacity = this.night * (raining ? 0.06 : 1);
     this.clouds.visible = this.night < 0.9;
+    this.clouds.children[0].material.opacity = raining ? 0.065 : 0.38;
     if (!reduced) this.clouds.rotation.y = time * 0.002;
   }
 }

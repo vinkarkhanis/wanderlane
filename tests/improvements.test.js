@@ -123,7 +123,8 @@ test("large frame spikes are substepped and capped; manual input is frame-rate i
   const runs = [30, 60, 120].map((fps) => {
     const v = new Vehicle(path);
     for (let i = 0; i < fps * 3; i++)
-      v.update(1 / fps, { accel: true, left: i > fps * 2 }, false);
+      // Apply the steering change at the same simulation time for every FPS.
+      v.update(1 / fps, { accel: true, left: i / fps >= 2 }, false);
     return v;
   });
   assert.ok(Math.abs(runs[0].heading - runs[2].heading) < 0.02);

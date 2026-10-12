@@ -99,6 +99,12 @@ export class Vehicle {
     this.steer = 0;
     this.throttle = 0;
     this.wheelAngle = 0;
+    this.bodyRoll =
+      this.acceleration =
+      this.lateralAcceleration =
+      this.suspensionOffset =
+      this.squat =
+        0;
     clearImpact(this);
   }
   reset(distance = this.near.distance, offset = this.lane) {
@@ -119,6 +125,11 @@ export class Vehicle {
     this.override = 0;
     this.braking = false;
     this.squat = 0;
+    this.bodyRoll =
+      this.acceleration =
+      this.lateralAcceleration =
+      this.suspensionOffset =
+        0;
   }
   update(dt, input, auto, biome = "meadow", traffic = null) {
     if (!Number.isFinite(dt) || dt <= 0) return;
@@ -152,7 +163,11 @@ export class Vehicle {
       grip = road ? 1 : biome === "snow" ? 0.48 : 0.65;
     const manual = (input.left ? 1 : 0) - (input.right ? 1 : 0);
     let steerTarget = manual,
-      goal = this.path.city ? 8 : this.path.urban ? 12 : PHYS.cruise;
+      goal = this.path.city
+        ? Math.min(8, PHYS.cruise * 0.35)
+        : this.path.urban
+          ? Math.min(12, PHYS.cruise * 0.55)
+          : PHYS.cruise;
     if (auto) {
       const look = this.path.city
           ? 4 + Math.abs(this.speed) * 0.55
@@ -215,12 +230,17 @@ export class Vehicle {
         ? 1
         : 0;
     if (input.brake) drive = -1;
-    this.throttle = damp(this.throttle, Math.max(0, drive), 4, dt);
+    this.throttle = damp(
+      this.throttle,
+      Math.max(0, drive),
+      PHYS.throttleResponse,
+      dt,
+    );
     this.braking = drive < -0.08 && this.speed > 0.2;
     const reverse = (input.reverse || input.brake) && !auto;
     let accel =
       this.throttle * PHYS.acceleration -
-      (0.12 + Math.abs(this.speed) * 0.012) *
+      (PHYS.rollingDrag + Math.abs(this.speed) * PHYS.speedDrag) *
         (road ? 1 : 3.5) *
         Math.sign(this.speed);
     if (drive < 0 && this.speed > 0) accel += drive * PHYS.brake;
@@ -246,7 +266,21 @@ export class Vehicle {
       0.7,
       (PHYS.lateralAcceleration * grip) / Math.max(1, Math.abs(this.speed)),
     );
-    this.heading += clamp(yaw, -yawLimit, yawLimit) * dt;
+    const actualYaw = clamp(yaw, -yawLimit, yawLimit);
+    this.heading += actualYaw * dt;
+    this.lateralAcceleration = damp(
+      this.lateralAcceleration,
+      actualYaw * this.speed,
+      8,
+      dt,
+    );
+    const ride = this.spec.ride;
+    this.bodyRoll = damp(
+      this.bodyRoll,
+      clamp(this.lateralAcceleration * ride.roll, -ride.maxRoll, ride.maxRoll),
+      ride.settle,
+      dt,
+    );
     this.x += Math.sin(this.heading) * this.speed * dt;
     this.z += Math.cos(this.heading) * this.speed * dt;
     integrateImpact(this, dt);
@@ -290,6 +324,7 @@ export class Vehicle {
       support - PHYS.suspensionTravel,
       support + PHYS.suspensionTravel,
     );
+    this.suspensionOffset = support - this.y;
     this.pitch = damp(
       this.pitch,
       Math.atan2(front - rear, PHYS.axles[1] - PHYS.axles[0]),
@@ -305,10 +340,16 @@ export class Vehicle {
       12,
       dt,
     );
+    this.acceleration = damp(
+      this.acceleration,
+      (this.speed - previous) / dt,
+      8,
+      dt,
+    );
     this.squat = damp(
       this.squat,
-      clamp(((this.speed - previous) / dt) * 0.004, -0.035, 0.025),
-      5,
+      clamp(this.acceleration * ride.pitch, -ride.maxPitch, ride.maxPitch),
+      ride.settle,
       dt,
     );
     this.dist += (Math.abs(this.speed) * dt) / 1000;

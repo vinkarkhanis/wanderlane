@@ -147,6 +147,9 @@ summary:focus-visible {
   width: 100%;
   height: 100%;
 }
+#windshieldRain {
+  display: none;
+}
 header {
   position: fixed;
   top: 32px;
@@ -657,6 +660,26 @@ a {
   max-height: 120px;
   overflow: auto;
   line-height: 1.6;
+}
+
+#journalPhotos {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  max-height: 220px;
+}
+#journalPhotos figure {
+  margin: 0;
+  flex: 0 0 200px;
+}
+#journalPhotos img {
+  display: block;
+  border-radius: 5px;
+}
+#journalPhotos figcaption {
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 6px 0;
 }
 #postcardDialog {
   width: min(900px, 90vw);

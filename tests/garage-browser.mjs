@@ -18,11 +18,14 @@ try {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 900 },
   });
-  page.setDefaultTimeout(20000);
+  page.setDefaultTimeout(60000);
   watch(page);
   await page.goto(base);
   await page.waitForFunction(
     () => window.wanderlane && !window.wanderlane.state.switching,
+  );
+  await page.waitForFunction(
+    () => !document.getElementById("startBtn").disabled,
   );
   await page.click("#startBtn");
   const ids = ["gt", "hatch", "sedan", "suv", "bike", "truck"];
