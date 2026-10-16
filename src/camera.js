@@ -47,6 +47,17 @@ export class CameraRig {
     this.height = this.snap
       ? v.y
       : damp(this.height, v.y, reduced ? 3 : CAMERA.vertical, dt);
+    if (this.pickupScene && car && !reduced) {
+      car.body.updateWorldMatrix(true, false);
+      this.cam.position.set(7, 3.8, -6.2).applyMatrix4(car.body.matrixWorld);
+      this.target.set(1.6, 0.9, 0.2).applyMatrix4(car.body.matrixWorld);
+      this.cam.up.set(0, 1, 0);
+      this.cam.fov = 52;
+      this.cam.updateProjectionMatrix();
+      this.cam.lookAt(this.target);
+      this.snap = false;
+      return;
+    }
     this.pitch = this.snap
       ? v.pitch
       : damp(this.pitch, v.pitch, CAMERA.pitch, dt);
@@ -79,6 +90,20 @@ export class CameraRig {
         )
         .applyMatrix4(car.body.matrixWorld);
       this.cam.up.set(0, 1, 0).transformDirection(car.body.matrixWorld);
+      if (this.passengerLook && car.passengerSeat) {
+        // Use the actual seat row for the glance. The normal forward cockpit
+        // anchor differs between models and can sit behind a front headrest.
+        this.cam.position.set(
+          -car.passengerSeat[0],
+          Math.max(anchor[1], car.passengerSeat[1] + 0.74) + 0.05,
+          car.passengerSeat[2] - 0.1,
+        );
+        this.cam.position.applyMatrix4(car.body.matrixWorld);
+        this.target.fromArray(car.passengerSeat);
+        this.target.y += 0.3;
+        this.target.z -= 0.04;
+        this.target.applyMatrix4(car.body.matrixWorld);
+      }
       this.cam.lookAt(this.target);
       this.snap = false;
       return;

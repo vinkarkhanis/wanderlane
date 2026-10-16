@@ -143,6 +143,16 @@ export class Vehicle {
   }
   step(dt, input, auto, biome, traffic) {
     const PHYS = this.spec.physics;
+    if (this.path.interactionHold?.(this)) {
+      this.speed =
+        this.throttle =
+        this.acceleration =
+        this.lateralAcceleration =
+          0;
+      this.steer = this.wheelAngle = 0;
+      this.braking = true;
+      return;
+    }
     if (this.flight !== "ground") {
       stepFlight(this, dt, input, biome, traffic);
       return;

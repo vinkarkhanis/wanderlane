@@ -1,5 +1,6 @@
 import { JOURNEY_PLACES } from "./puneJourney.js";
 import { wrappedDistance } from "./cityExperience.js";
+import { FLOWER_PICKUP_SECONDS } from "./flowerPickup.js";
 
 export const FLOWER_POSTCARD = {
   ...JOURNEY_PLACES["pashan-chai"],
@@ -14,6 +15,7 @@ export function flowerTrip(path) {
     ...JOURNEY_PLACES["baner-pause"],
     label: "Baner flower stall · fictional stop",
     s: map(JOURNEY_PLACES["baner-pause"].s),
+    pickupSeconds: FLOWER_PICKUP_SECONDS,
   };
   const arrival = { ...FLOWER_POSTCARD, s: map(FLOWER_POSTCARD.s) };
   return {

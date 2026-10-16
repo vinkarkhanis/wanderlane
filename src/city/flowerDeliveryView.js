@@ -21,23 +21,36 @@ export class FlowerDeliveryView {
     this.box = new THREE.BoxGeometry(1, 1, 1);
     this.bloom = new THREE.SphereGeometry(0.09, 6, 4);
     this.geometries.push(this.box, this.bloom);
-    this.pickup = this.porch("BANER FLOWERS", false);
+    this.pickup = new THREE.Group();
+    this.pickupShop = this.porch("BANER FLOWERS", false);
+    this.pickupShop.rotation.y = Math.PI / 2;
+    this.pickupShop.position.x = -0.3;
+    this.pickup.add(this.pickupShop);
+    this.pickup.userData.bouquet = this.pickupShop.userData.bouquet;
     this.destination = this.porch("THE COURTYARD", true);
     this.recipient = this.person();
     this.destination.add(this.recipient);
     this.deliveryStarted = null;
     this.deliveryProgress = 0;
     this.finishedByPlayer = false;
-    this.cargo = this.flowers();
-    this.cargo.scale.setScalar(0.65);
+    this.cargo = this.wrappedBouquet();
+    this.collector = this.person();
+    this.pickup.add(this.collector);
+    this.parcel = this.wrappedBouquet();
+    this.pickup.add(this.parcel);
+    this.door = new THREE.Vector3();
     scene.add(this.pickup, this.destination);
   }
   person() {
     const group = new THREE.Group();
     this.block(group, 0, 1.02, 0, 0.44, 0.65, 0.27, this.cloth);
     for (const x of [-0.12, 0.12]) {
-      this.block(group, x, 0.4, 0, 0.15, 0.7, 0.18, this.wood);
-      this.block(group, x, 0.07, -0.06, 0.18, 0.14, 0.32, this.wood);
+      const leg = new THREE.Group();
+      leg.position.set(x, 0.75, 0);
+      this.block(leg, 0, -0.35, 0, 0.15, 0.7, 0.18, this.wood);
+      this.block(leg, 0, -0.68, -0.06, 0.18, 0.14, 0.32, this.wood);
+      group.add(leg);
+      group.userData[x < 0 ? "leftLeg" : "rightLeg"] = leg;
     }
     const head = new THREE.Mesh(this.bloom, this.skin);
     head.scale.set(1.65, 2, 1.6);
@@ -55,6 +68,104 @@ export class FlowerDeliveryView {
       group.userData[side < 0 ? "leftArm" : "rightArm"] = arm;
     }
     return group;
+  }
+  posePickup(s, car, reduced) {
+    const elapsed = s.pickup?.elapsed;
+    const actor = this.collector;
+    actor.visible = this.pickup.visible;
+    this.parcel.visible =
+      elapsed !== undefined && elapsed >= 0.8 && elapsed < 7.5;
+    this.parcel.scale.setScalar(car.passengerSeat ? 1 : 0.7);
+    const legs = actor.userData;
+    legs.leftLeg.rotation.x = legs.rightLeg.rotation.x = 0;
+    legs.leftArm.rotation.x = legs.rightArm.rotation.x = 0;
+    if (elapsed === undefined) {
+      actor.position.set(2.8, 0, -1.4);
+      actor.rotation.y = -Math.PI / 2;
+      return;
+    }
+    car.body.updateWorldMatrix(true, false);
+    this.pickup.updateWorldMatrix(true, false);
+    const halfWidth = car.bounds?.halfWidth ?? car.spec?.width / 2 ?? 1.1;
+    const seat = car.passengerSeat ?? [0, 1.09, -0.72];
+    this.door.set(halfWidth + 0.45, 0, seat[2]);
+    car.body.localToWorld(this.door);
+    this.pickup.worldToLocal(this.door);
+    this.door.y = 0;
+    const walk =
+      elapsed < 2
+        ? 0
+        : elapsed < 5
+          ? (elapsed - 2) / 3
+          : elapsed < 7.5
+            ? 1
+            : 1 - (elapsed - 7.5) / 1.5;
+    const t = reduced ? (walk > 0.5 ? 1 : 0) : walk * walk * (3 - 2 * walk);
+    actor.position.set(
+      3 + (this.door.x - 3) * t,
+      0,
+      -0.8 + (this.door.z + 0.8) * t,
+    );
+    actor.rotation.y =
+      elapsed < 2 || elapsed >= 7.5 ? -Math.PI / 2 : Math.PI / 2;
+    const walking = (elapsed >= 2 && elapsed < 5) || elapsed >= 7.5;
+    const swing = walking && !reduced ? Math.sin(elapsed * 7) * 0.35 : 0;
+    legs.leftLeg.rotation.x = swing;
+    legs.rightLeg.rotation.x = -swing;
+    legs.leftArm.rotation.x = walking ? 0.65 : 1.15;
+    legs.rightArm.rotation.x = walking ? 0.65 : 1.15;
+    if (elapsed < 5) {
+      if (this.parcel.parent !== this.pickup) this.pickup.add(this.parcel);
+      const lift = Math.min(1, Math.max(0, (elapsed - 0.8) / 1.2));
+      this.parcel.position.set(
+        elapsed < 2 ? 3.6 - lift * 0.25 : actor.position.x - 0.35,
+        elapsed < 2 ? 1.32 - lift * 0.3 : 1.02,
+        -0.8 + (actor.position.z + 0.8) * t,
+      );
+      this.parcel.rotation.set(0, 0, -0.1);
+    } else if (elapsed < 7.5) {
+      if (this.parcel.parent !== car.body) car.body.add(this.parcel);
+      const progress = (elapsed - 5) / 2.5;
+      const windowY = seat[1] + 0.65;
+      if (!car.passengerSeat) {
+        this.parcel.position.set(
+          (halfWidth + 0.1) * (1 - progress),
+          1.05 + 0.04 * progress,
+          seat[2],
+        );
+        this.parcel.rotation.set(-0.9 * progress, 0, 0);
+      } else if (progress < 0.35) {
+        const u = progress / 0.35;
+        this.parcel.position.set(
+          halfWidth + 0.1 - u * 0.25,
+          1.05 + (windowY - 1.05) * u,
+          seat[2],
+        );
+        this.parcel.rotation.set(0, 0, (u * Math.PI) / 2);
+      } else if (progress < 0.65) {
+        const u = (progress - 0.35) / 0.3;
+        this.parcel.position.set(
+          (halfWidth - 0.15) * (1 - u) + seat[0] * u,
+          windowY,
+          seat[2],
+        );
+        this.parcel.rotation.set(0, 0, Math.PI / 2);
+      } else {
+        const u = (progress - 0.65) / 0.35;
+        this.parcel.position.set(
+          seat[0],
+          windowY * (1 - u) + seat[1] * u,
+          seat[2],
+        );
+        this.parcel.rotation.set(
+          (car.passengerSeatTilt ?? -0.28) * u,
+          0,
+          (Math.PI / 2) * (1 - u) - 0.18 * u,
+        );
+      }
+    }
+    if (car.passengerWindow && elapsed >= 4.6 && elapsed < 8)
+      car.passengerWindow.visible = false;
   }
   poseDelivery(progress, reduced = false) {
     const reach = Math.sin((Math.min(1, progress * 2) * Math.PI) / 2);
@@ -77,6 +188,8 @@ export class FlowerDeliveryView {
   get snapshot() {
     return {
       progress: this.deliveryProgress,
+      cargoLocation: this.cargoLocation ?? null,
+      pickupStage: this.pickupStage ?? null,
       stage:
         this.deliveryStarted === null
           ? "waiting"
@@ -101,6 +214,33 @@ export class FlowerDeliveryView {
       const head = new THREE.Mesh(this.bloom, i % 2 ? this.pink : this.gold);
       head.position.set(x, 0.4 + (i % 3) * 0.035, z);
       group.add(head);
+    }
+    return group;
+  }
+  wrappedBouquet() {
+    const group = new THREE.Group();
+    const paper = new THREE.MeshStandardMaterial({
+      color: 0xd8bd91,
+      roughness: 0.95,
+      side: THREE.DoubleSide,
+    });
+    const cone = new THREE.CylinderGeometry(0.18, 0.035, 0.3, 16, 1, true);
+    this.materials.push(paper);
+    this.geometries.push(cone);
+    const wrap = new THREE.Mesh(cone, paper);
+    wrap.position.y = 0.18;
+    group.add(wrap);
+    this.block(group, 0, 0.12, 0, 0.09, 0.035, 0.09, this.cloth);
+    for (let i = 0; i < 9; i++) {
+      const angle = i * 2.4,
+        radius = i ? 0.11 : 0;
+      const x = Math.cos(angle) * radius,
+        z = Math.sin(angle) * radius;
+      this.block(group, x * 0.5, 0.28, z * 0.5, 0.012, 0.42, 0.012, this.leaf);
+      const bloom = new THREE.Mesh(this.bloom, i % 3 ? this.pink : this.gold);
+      bloom.scale.setScalar(0.7);
+      bloom.position.set(x, 0.45 + (i % 3) * 0.035, z);
+      group.add(bloom);
     }
     return group;
   }
@@ -132,6 +272,18 @@ export class FlowerDeliveryView {
     sign.rotation.y = Math.PI;
     sign.position.set(0, 2.39, 2.98);
     group.add(sign);
+    if (!courtyard) {
+      const backSign = new THREE.Mesh(geometry, material);
+      backSign.position.set(0, 2.97, 4.605);
+      this.block(group, 0, 2.97, 4.55, 3.65, 0.56, 0.08, this.wood);
+      group.add(backSign);
+      for (const x of [-0.8, 0]) {
+        const stock = this.flowers();
+        stock.scale.setScalar(0.5);
+        stock.position.set(x, 1.31, 4.1);
+        group.add(stock);
+      }
+    }
     if (courtyard) {
       // Porch frame stays behind the usable bay and outside the car's approach.
       this.block(group, 0, 1.2, 4.84, 3.5, 2.4, 0.1, this.cream);
@@ -158,19 +310,34 @@ export class FlowerDeliveryView {
       s?.tripId === "flower-delivery" &&
       ["active", "completed"].includes(s.status);
     this.pickup.visible = this.destination.visible = !!visible;
-    this.cargo.visible = visible && s.cargo === "onboard" && cameraMode !== 3;
-    if (this.cargo.parent !== car.group) car.group.add(this.cargo);
-    this.cargo.position.set(
+    this.cargo.visible =
+      !!visible && (s.cargo === "onboard" || (s.pickup?.elapsed ?? 0) >= 7.5);
+    // Follow body pitch/roll instead of hovering over the boot. On the bike
+    // the smaller bundle rests on the rear pillion, behind the rider.
+    if (this.cargo.parent !== car.body) car.body.add(this.cargo);
+    const seat = car.passengerSeat;
+    this.cargo.position.fromArray(seat ?? [0, 1.09, -0.72]);
+    this.cargo.rotation.set(
+      seat ? (car.passengerSeatTilt ?? -0.28) : -0.9,
       0,
-      car.spec?.kind === "bike" ? 0.85 : 1.05,
-      car.spec?.kind === "bike" ? -0.65 : -1.65,
+      seat ? -0.18 : 0,
     );
+    this.cargo.scale.setScalar(seat ? 1 : 0.7);
+    this.cargoLocation = this.cargo.visible
+      ? seat
+        ? "passenger seat"
+        : "rear pillion"
+      : null;
     if (!visible || s.cargo !== "delivered") {
       this.deliveryStarted = null;
       this.finishedByPlayer = false;
       this.poseDelivery(0, true);
     }
-    if (!visible) return;
+    if (!visible) {
+      this.parcel.visible = this.collector.visible = false;
+      this.pickupStage = null;
+      return;
+    }
     for (const [group, id] of [
       [this.pickup, "baner-pause"],
       [this.destination, "pashan-chai"],
@@ -184,7 +351,10 @@ export class FlowerDeliveryView {
         group.rotation.copy(stop.group.rotation);
       }
     }
-    this.pickup.userData.bouquet.visible = s.cargo === "awaiting pickup";
+    this.pickup.userData.bouquet.visible =
+      s.cargo === "awaiting pickup" && (s.pickup?.elapsed ?? 0) < 0.8;
+    this.pickupStage = s.pickup?.stage ?? null;
+    this.posePickup(s, car, reduced);
     this.destination.userData.bouquet.visible = s.cargo === "delivered";
     if (s.cargo === "delivered") {
       this.deliveryStarted ??= time;
@@ -197,7 +367,12 @@ export class FlowerDeliveryView {
     }
   }
   dispose() {
-    for (const group of [this.pickup, this.destination, this.cargo])
+    for (const group of [
+      this.pickup,
+      this.destination,
+      this.cargo,
+      this.parcel,
+    ])
       group.removeFromParent();
     for (const resource of [
       ...this.geometries,

@@ -851,7 +851,7 @@ a {
 #cityTrip.trip-compact
   > :not(#tripEyebrow):not(#tripNavigation):not(#tripArrival):not(
     #tripSecondary
-  ):not(#tripDetails):not(#journeyRouteChoice) {
+  ):not(#tripDetails):not(#journeyRouteChoice):not(#cargoLook) {
   display: none;
 }
 #journeyRouteChoice {
@@ -929,6 +929,15 @@ a {
   padding: 6px 9px;
   font-size: 11px;
   min-height: 32px;
+}
+#cargoLook {
+  margin-top: 8px;
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+#cargoLook[hidden] {
+  display: none;
 }
 #tripNavigation {
   display: flex;

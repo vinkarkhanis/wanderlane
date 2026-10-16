@@ -205,10 +205,20 @@ export function renderJourneyPlaces(data, path, height, block, res) {
   for (const p of places) {
     const co = Math.cos(p.yaw),
       si = Math.sin(p.yaw);
+    let shelter = false;
     const b = (x, y, z, w, h, d, mat) => {
+      let turn = 0;
+      // Baner's shop sits beside the car, on the side away from the road.
+      // The full forward departure corridor stays open inside the parcel.
+      if (shelter && p.id === "baner-pause") {
+        const across = x;
+        x = z - 0.3;
+        z = -across;
+        turn = Math.PI / 2;
+      }
       const wx = p.x + x * co + z * si,
         wz = p.z - x * si + z * co;
-      block(wx, height(wx, wz) + y, wz, w, h, d, p.yaw, mat);
+      block(wx, height(wx, wz) + y, wz, w, h, d, p.yaw + turn, mat);
     };
     // Short slabs follow the same terrain used by tyre contacts. No raised kerb
     // crosses the entrance; the centre remains clear for a full-size car.
@@ -227,19 +237,22 @@ export function renderJourneyPlaces(data, path, height, block, res) {
     b(1.69, 2.31, 4.53, 0.28, 0.06, 0.04, res.mark);
     b(1.69, 2.1, 4.53, 0.28, 0.06, 0.04, res.mark);
     b(1.82, 2.2, 4.53, 0.06, 0.24, 0.04, res.mark);
-    // Original small chai shelter at the back of the validated parcel. The
+    shelter = true;
+    // Original small chai shelter at the edge of the validated parcel. The
     // parking centre and its approach stay open; no surveyed business is claimed.
     for (const x of [-1.65, 1.65]) b(x, 1.3, 4.4, 0.1, 2.6, 0.1, res.timber);
     b(0, 2.65, 3.95, 3.8, 0.16, 1.85, res.teal);
     b(0, 2.38, 3.05, 3.65, 0.35, 0.08, res.terracotta);
     b(0, 0.6, 4.35, 2.6, 1.2, 0.8, res.timber);
     b(0, 1.25, 4.25, 2.85, 0.1, 1, res.cream);
-    b(-0.8, 1.54, 4.25, 0.34, 0.5, 0.34, res.steel);
-    b(-0.8, 1.81, 4.25, 0.39, 0.05, 0.39, res.steel);
-    b(-0.8, 1.89, 4.25, 0.08, 0.12, 0.08, res.timber);
-    b(-0.56, 1.66, 4.25, 0.22, 0.08, 0.09, res.steel);
-    for (const x of [-0.2, 0.15, 0.5])
-      b(x, 1.4, 3.95, 0.13, 0.2, 0.13, res.cream);
+    if (p.id !== "baner-pause") {
+      b(-0.8, 1.54, 4.25, 0.34, 0.5, 0.34, res.steel);
+      b(-0.8, 1.81, 4.25, 0.39, 0.05, 0.39, res.steel);
+      b(-0.8, 1.89, 4.25, 0.08, 0.12, 0.08, res.timber);
+      b(-0.56, 1.66, 4.25, 0.22, 0.08, 0.09, res.steel);
+      for (const x of [-0.2, 0.15, 0.5])
+        b(x, 1.4, 3.95, 0.13, 0.2, 0.13, res.cream);
+    }
     b(0, 2.37, 4.1, 1.5, 0.07, 0.12, res.glow);
   }
   return places;

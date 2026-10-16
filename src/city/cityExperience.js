@@ -1,4 +1,5 @@
 import { roadName } from "./cityDetails.js";
+import { flowerPickupStage } from "./flowerPickup.js";
 import {
   JOURNEY_PLACES,
   bayContains,
@@ -108,6 +109,8 @@ export class CityExperience {
     this.road = "";
     this.marathi = "";
     this.arrivalDwell = 0;
+    this.pickupElapsed = null;
+    this.pickupAnchor = null;
     this.arrivalDistance = Infinity;
     this.guidance = "";
     this.direction = "straight";
@@ -127,6 +130,29 @@ export class CityExperience {
   update(dt, v, violations = 0) {
     if (this.disposed || this.status !== "active" || !(dt > 0)) return;
     this.elapsed += dt;
+    if (this.pickupElapsed !== null) {
+      if (
+        Math.hypot(v.x - this.pickupAnchor.x, v.z - this.pickupAnchor.z) > 2
+      ) {
+        this.pickupElapsed = null;
+        this.pickupAnchor = null;
+        this.arrivalDwell = 0;
+        this.arrivalStage = "approach";
+        return;
+      }
+      this.pickupElapsed += dt;
+      this.guidance = flowerPickupStage(this.pickupElapsed);
+      this.arrivalStage = "pickup";
+      if (this.pickupElapsed >= this.currentStop.pickupSeconds) {
+        this.objectiveIndex++;
+        this.pickupElapsed = null;
+        this.pickupAnchor = null;
+        this.arrivalDwell = 0;
+        this.arrivalStage = "driving";
+        this.guidance = "Flowers are on the passenger seat. Ready to drive.";
+      }
+      return;
+    }
     const outside =
       (v.near.surfaceDistance ?? Math.abs(v.near.offset ?? 0)) >
       (v.near.width ?? 7) / 2 + 2;
@@ -197,6 +223,12 @@ export class CityExperience {
       this.arrivalDwell =
         atBay && Math.abs(v.speed) < 0.5 ? this.arrivalDwell + dt : 0;
       if (this.arrivalDwell >= 2) {
+        if (objectiveStop?.pickupSeconds) {
+          this.pickupElapsed = 0;
+          this.pickupAnchor = { x: v.x, z: v.z };
+          this.arrivalStage = "pickup";
+          return;
+        }
         this.objectiveIndex++;
         if (objectiveStop) {
           this.arrivalDwell = 0;
@@ -269,6 +301,7 @@ export class CityExperience {
     return out;
   }
   arrivalSpeedLimit(v) {
+    if (this.pickupElapsed !== null) return 0;
     const a = this.currentStop;
     if (!a || this.status !== "active" || !this.stopping) return Infinity;
     const gap = signedDistance(v.near.distance, a.s, this.path.length);
@@ -311,6 +344,14 @@ export class CityExperience {
               : "awaiting pickup"
           : null,
       stopping: this.stopping,
+      pickup:
+        this.pickupElapsed === null
+          ? null
+          : {
+              elapsed: this.pickupElapsed,
+              duration: this.currentStop.pickupSeconds,
+              stage: flowerPickupStage(this.pickupElapsed),
+            },
       stopRemaining: Math.max(
         0,
         (o?.stop ? o.distance : d.distance) - this.highWater,

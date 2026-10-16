@@ -121,6 +121,30 @@ async function startJourney() {
 const tripUI = new CityTripUI(startJourney, () => {
   experience?.cancel();
 });
+const cargoLook = document.createElement("button");
+cargoLook.type = "button";
+cargoLook.id = "cargoLook";
+cargoLook.hidden = true;
+cargoLook.textContent = "Look at flowers · passenger seat";
+cargoLook.setAttribute("aria-pressed", "false");
+el("cityTrip").append(cargoLook);
+let cargoCamera = 0;
+cargoLook.addEventListener("click", () => {
+  if (!car.passengerSeat || flowerView.cargoLocation !== "passenger seat")
+    return;
+  controls.clear();
+  if (rig.passengerLook) {
+    rig.passengerLook = false;
+    rig.mode = cargoCamera;
+  } else {
+    cargoCamera = rig.mode;
+    rig.mode = 3;
+    rig.passengerLook = true;
+  }
+  rig.snap = true;
+  cargoLook.blur();
+  updateLabels();
+});
 world = makeWorld();
 traffic = new Traffic(scene, path);
 world.update(vehicle.near.distance, 0, reduced, true);
@@ -442,7 +466,9 @@ function updateLabels() {
         ? "Cancel landing"
         : "Land";
   el("flyBtn").setAttribute("aria-pressed", vehicle.flight !== "ground");
-  el("camBtn").textContent = CAMERA_MODES[rig.mode];
+  el("camBtn").textContent = rig.passengerLook
+    ? "Passenger seat"
+    : CAMERA_MODES[rig.mode];
   el("trafficBtn").textContent =
     "Traffic " + TRAFFIC[traffic.mode].toLowerCase();
   el("traffic").selectedIndex = traffic.mode;
@@ -485,11 +511,13 @@ const controls = new Controls({
     updateLabels();
   },
   cockpit() {
+    rig.passengerLook = false;
     rig.mode = rig.mode === 3 ? 0 : 3;
     rig.snap = true;
     updateLabels();
   },
   cam() {
+    rig.passengerLook = false;
     rig.mode = (rig.mode + 1) % CAMERA_MODES.length;
     rig.snap = true;
     updateLabels();
@@ -514,6 +542,11 @@ const controls = new Controls({
   return: returnToRoad,
   flight() {
     if (!started || paused || switching) return;
+    if (
+      experience?.pickupElapsed !== null &&
+      experience?.pickupElapsed !== undefined
+    )
+      return;
     auto = false;
     controls.clear();
     vehicle.toggleFlight();
@@ -550,6 +583,9 @@ function chooseDiscovery() {
   experience.reset();
 }
 function attachJourneyDriving() {
+  path.interactionHold = () =>
+    experience?.pickupElapsed !== null &&
+    experience?.pickupElapsed !== undefined;
   path.getDrivePosition = (s, lane, out) =>
     experience.drivePosition(s, lane, out);
   path.arrivalSpeedLimit = (v) => experience.arrivalSpeedLimit(v);
@@ -984,6 +1020,11 @@ function loop(now) {
     paused || rig.snap,
   );
   car.place(visual, reduced);
+  const pickupActive =
+    experience?.pickupElapsed !== null &&
+    experience?.pickupElapsed !== undefined;
+  if (rig.pickupScene && !pickupActive) rig.snap = true;
+  rig.pickupScene = driveMode === "pune" && pickupActive;
   flightView.update(vehicle, time, reduced);
   flowerView.update(
     driveMode === "pune" ? experience?.snapshot : null,
@@ -993,6 +1034,20 @@ function loop(now) {
     time,
     reduced,
   );
+  if (rig.passengerLook && flowerView.cargoLocation !== "passenger seat") {
+    rig.passengerLook = false;
+    updateLabels();
+  }
+  cargoLook.hidden =
+    !started ||
+    paused ||
+    vehicle.flight !== "ground" ||
+    pickupActive ||
+    flowerView.cargoLocation !== "passenger seat";
+  cargoLook.textContent = rig.passengerLook
+    ? "Back to the road"
+    : "Look at flowers · passenger seat";
+  cargoLook.setAttribute("aria-pressed", String(!!rig.passengerLook));
   car.update(paused ? 0 : dt, visual.speed, env.night, vehicle.braking);
   updateWorld();
   const raining =
@@ -1216,6 +1271,7 @@ window.wanderlane = {
       auto,
       paused,
       camera: rig.mode,
+      passengerLook: !!rig.passengerLook,
       vehicleModel: selectedVehicle,
       vehicleName: vehicle.spec.name,
       vehicleBounds: vehicle.bounds,
@@ -1240,6 +1296,7 @@ window.wanderlane = {
       flightTarget: vehicle.flightTarget ? { ...vehicle.flightTarget } : null,
       input: { ...controls.input },
       heading: vehicle.heading,
+      position: { x: vehicle.x, y: vehicle.y, z: vehicle.z },
       distance: vehicle.dist,
       roadDistance: vehicle.near.distance,
       offset: vehicle.near.offset,

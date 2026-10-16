@@ -73,13 +73,17 @@ export class CityTripUI {
       const settling = s.arrival.stage === "settling";
       text(
         "tripArrivalHint",
-        settling
-          ? `Stay still · ${Math.max(0, 2 - s.arrival.dwell).toFixed(1)} s`
-          : s.arrival.stage === "parking"
-            ? "Brake gently and come to a stop"
-            : "Look for the P sign · pull into the bay on the left",
+        s.pickup
+          ? s.pickup.stage.charAt(0).toUpperCase() + s.pickup.stage.slice(1)
+          : settling
+            ? `Stay still · ${Math.max(0, 2 - s.arrival.dwell).toFixed(1)} s`
+            : s.arrival.stage === "parking"
+              ? "Brake gently and come to a stop"
+              : "Look for the P sign · pull into the bay on the left",
       );
-      document.getElementById("tripArrivalProgress").value = s.arrival.dwell;
+      const progress = document.getElementById("tripArrivalProgress");
+      progress.max = s.pickup ? s.pickup.duration : 2;
+      progress.value = s.pickup ? s.pickup.elapsed : s.arrival.dwell;
     }
     if (active !== this.active) {
       this.active = active;
@@ -105,7 +109,9 @@ export class CityTripUI {
           ? "Flowers delivered · Thank you"
           : "Arrived · Take a moment"
         : active
-          ? s.objectiveLabel
+          ? s.pickup
+            ? "Parked · collecting your flowers"
+            : s.objectiveLabel
           : s.description,
     );
     text(
@@ -122,9 +128,11 @@ export class CityTripUI {
         ? `${Math.floor(s.elapsed / 60)}m ${Math.floor(s.elapsed % 60)}s · ${s.quality} · ${s.reason}`
         : active
           ? arrival
-            ? s.cargo === "awaiting pickup"
-              ? "Collect flowers · stay parked for 2 seconds"
-              : `${s.destination} · park here for 2 seconds`
+            ? s.pickup
+              ? "Please stay parked until the assistant steps clear"
+              : s.cargo === "awaiting pickup"
+                ? "Collect flowers · stay parked for 2 seconds"
+                : `${s.destination} · park here for 2 seconds`
             : `${s.cargo === "onboard" ? "Flowers onboard · " : ""}${s.destination} · ${s.remaining >= 1000 ? (s.remaining / 1000).toFixed(1) + " km" : Math.round(s.remaining) + " m"} remaining`
           : "Follow the road. Take the long way.",
     );

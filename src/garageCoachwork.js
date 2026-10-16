@@ -109,6 +109,7 @@ export function buildCoachwork(spec, art) {
   mesh(bodyGeometry, paint, 0, 0, 0);
 
   const windows = [];
+  let passengerWindow;
   const glazing = (points) => {
     const obj = mesh(panel(points), glass, 0, 0, 0);
     windows.push(obj);
@@ -155,12 +156,13 @@ export function buildCoachwork(spec, art) {
   for (const side of [-1, 1]) {
     const b = side * beltWidth,
       t = side * roofWidth;
-    glazing([
+    const frontSideWindow = glazing([
       [b, belt, frontBase - 0.03],
       [t, roof - 0.075, frontTop - 0.035],
       [t, roof - 0.075, split + 0.035],
       [b, belt, split + 0.035],
     ]);
+    if (side === 1) passengerWindow = frontSideWindow;
     glazing([
       [b, belt, split - 0.04],
       [t, roof - 0.075, split - 0.04],
@@ -513,8 +515,10 @@ export function buildCoachwork(spec, art) {
   }
   return {
     windows,
+    passengerWindow,
     roof,
     cabinZ: (frontTop + rearTop) / 2,
+    passengerSeat: [w * 0.21, r + 0.27, frontTop - 0.31],
     cockpitAnchor: [-0.34, roof - 0.2, (frontTop + rearTop) / 2 - 0.14],
   };
 }

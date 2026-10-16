@@ -6,8 +6,15 @@ Chai Run starts its existing Pune journey. The duration labels are estimates,
 not timers. In Pune City, select **Monsoon Flower Delivery** under Discovery drive and
 press **Start drive**. The fictional Baner flower stall uses the existing
 validated Baner parking parcel. Stop in the marked bay for two continuous
-seconds below 0.5 m/s to collect the bouquet. Auto-drive handles both stops
-and resumes after pickup; manual driving remains available throughout.
+seconds below 0.5 m/s to begin the pickup. A nine-second parked scene shows
+an assistant collecting the wrapped bouquet, carrying it to the passenger
+window, placing it on the seat and stepping clear. Driving controls hold the
+car still during the interaction. Auto-drive resumes afterward; manual input
+also becomes available again. Pause, restart and cancellation remain available.
+
+The Baner stall is beside the bay, on the side away from the road, so the
+departure corridor is clear. A short exterior camera view frames the handover;
+reduced motion keeps the player's camera. The passenger window opens for loading.
 
 Carry the flowers along the existing Baner–Pashan Explorer, choosing Park
 Ridge Road or the approximately 140 m longer Wakeshwar Road detour. Park
@@ -17,6 +24,12 @@ the porch. A courtyard recipient steps forward and accepts the bouquet over
 four seconds; reduced motion shows the settled pose immediately. Completion
 displays a thank-you and plays the existing arrival
 chime. Driving quality is optional feedback and never blocks a delivery.
+
+While driving, the paper-wrapped bouquet rests on the passenger seat and follows
+the cabin's suspension movement. **Look at flowers · passenger seat** offers a
+driver's glance at it; **Back to the road** restores the previous camera. The
+motorbike uses the rear pillion. Cancellation and delivery remove the carried
+bouquet. It is no longer displayed on the boot lid.
 
 The story starts about 80 m before the Baner bay, at canonical route
 distance 1439.25 m. Its destination is the existing Pashan bay at 4905 m.

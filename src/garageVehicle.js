@@ -478,6 +478,8 @@ class GarageVehicle {
         cabin.cabinZ + 0.12,
       );
       this.cockpitAnchor = cabin.cockpitAnchor;
+      this.passengerSeat = cabin.passengerSeat;
+      this.passengerSeatTilt = -0.28;
       this.windows = cabin.windows;
     }
     this.bumperAnchor = [0, bike ? 1.25 : h * 0.65, l / 2 + 0.14];

@@ -156,7 +156,7 @@ export class Car {
     this.windshield = mesh(panel(front), this.glass);
     mesh(panel(rear), this.glass);
     for (const side of [-1, 1]) {
-      mesh(
+      const sideWindow = mesh(
         panel([
           [side * 0.75, 0.965, 1.0],
           [side * 0.6, 1.415, 0.225],
@@ -165,6 +165,7 @@ export class Car {
         ]),
         this.glass,
       );
+      if (side === 1) this.passengerWindow = sideWindow;
       tube(
         [
           [side * 0.64, 1.425, -0.8],
@@ -402,11 +403,15 @@ export class Car {
     this.cockpit = new Cockpit(this.body);
     this.bounds = { halfWidth: 1.125, halfLength: 2.34, height: 1.49 };
     this.cameraAnchors = CAR_ANCHORS;
+    // The driver sits at negative X; this is the opposite seat cushion.
+    this.passengerSeat = [0.34, 0.56, -0.45];
+    this.passengerSeatTilt = -0.55;
   }
   setColor(hex) {
     this.paint.color.setHex(hex);
   }
   setCameraMode(mode) {
+    this.passengerWindow.visible = true;
     this.cockpit.group.visible = mode === 3;
     this.windshield.visible = mode !== 3;
   }
