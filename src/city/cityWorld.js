@@ -1134,6 +1134,7 @@ export class CityWorld {
       parkedVehicles = 0,
       rooftopFittings = 0,
       frontages = 0,
+      detailedFrontages = 0,
       pavementBays = 0;
     let buildings = 0,
       vegetation = 0,
@@ -1155,6 +1156,8 @@ export class CityWorld {
       );
       rooftopFittings += c.rooftopFittings;
       frontages += c.frontages.length;
+      if (this.quality !== "Low")
+        detailedFrontages += c.frontages.filter((p) => p.detailed).length;
       pavementBays += c.pavementBays;
       buildings += c.data.buildings.length;
       vegetation += c.trees;
@@ -1168,6 +1171,7 @@ export class CityWorld {
       parkedVehicles,
       rooftopFittings,
       frontages,
+      detailedFrontages,
       pavementBays,
       elevation: this.manifest.elevation.label,
       vegetation,

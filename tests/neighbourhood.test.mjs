@@ -5,6 +5,29 @@ import {
   SHOP_CROWD,
   shopfronts,
 } from "../src/city/puneShopfronts.js";
+test("customers collect purchases after browsing and carry them back out", () => {
+  for (const [i, purchase] of [
+    [4, "bag"],
+    [6, "cup"],
+  ]) {
+    const at = (phase) =>
+      pedestrianPose("shops", i, (phase - (i - 4) * 6 + 28) % 28);
+    assert.equal(at(3).carry, false);
+    const browse = at(11);
+    assert.equal(browse.moving, false);
+    assert.ok(browse.reach > 0.9);
+    assert.equal(
+      browse.action,
+      purchase === "cup" ? "collecting chai" : "browsing",
+    );
+    const leave = at(18);
+    assert.equal(leave.purchase, purchase);
+    assert.equal(leave.carry, true);
+    assert.equal(leave.moving, true);
+    assert.ok(leave.z < browse.z);
+    assert.equal(at(27).carry, false);
+  }
+});
 test("pavement walkers pause, return and stay clear of shops, scooters and one another", () => {
   assert.deepEqual(SHOP_CROWD, { Low: 6, Medium: 12, High: 16 });
   for (let t = 0; t < 64; t += 0.1) {

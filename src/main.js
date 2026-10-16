@@ -92,37 +92,35 @@ let seed = String(saved.seed || "aster-2026"),
     !!saved.reduced || matchMedia("(prefers-reduced-motion: reduce)").matches;
 let car = createVehicleModel(scene, vehicle.spec, COLORS[0][1]);
 const flightView = new FlightView(scene, car);
-const tripUI = new CityTripUI(
-  async () => {
-    if (!experience || switching) return;
-    controls.clear();
-    auto = false;
-    usePuneRoute(el("journeyRoute").value);
-    chooseDiscovery();
-    vehicle.reset(experience.definition.start, -1.6);
-    signals.reset(vehicle.near.distance);
-    signals.time = 0;
-    experience.start();
-    traffic.setMode(traffic.mode, vehicle);
-    env.mode = experience.definition.time ?? 2;
-    if (experience.definition.season) {
-      season = experience.definition.season;
-      world.setSeason(season);
-      el("puneSeason").value = season;
-    }
-    rig.snap = true;
-    try {
-      await world.ready(vehicle);
-    } catch (error) {
-      experience?.cancel();
-      toast("The trip could not load: " + error.message);
-    }
-    updateLabels();
-  },
-  () => {
+async function startJourney() {
+  if (!experience || switching) return;
+  controls.clear();
+  auto = false;
+  usePuneRoute(el("journeyRoute").value);
+  chooseDiscovery();
+  vehicle.reset(experience.definition.start, -1.6);
+  signals.reset(vehicle.near.distance);
+  signals.time = 0;
+  experience.start();
+  traffic.setMode(traffic.mode, vehicle);
+  env.mode = experience.definition.time ?? 2;
+  if (experience.definition.season) {
+    season = experience.definition.season;
+    world.setSeason(season);
+    el("puneSeason").value = season;
+  }
+  rig.snap = true;
+  try {
+    await world.ready(vehicle);
+  } catch (error) {
     experience?.cancel();
-  },
-);
+    toast("The trip could not load: " + error.message);
+  }
+  updateLabels();
+}
+const tripUI = new CityTripUI(startJourney, () => {
+  experience?.cancel();
+});
 world = makeWorld();
 traffic = new Traffic(scene, path);
 world.update(vehicle.near.distance, 0, reduced, true);
@@ -681,6 +679,7 @@ el("postcardBtn").addEventListener("click", async () => {
   auto = false;
   paused = true;
   const postcard = currentPostcard();
+  if (postcard.id === FLOWER_POSTCARD.id) flowerView.finishHandover();
   car.setCameraMode(0);
   try {
     el("postcardImage").src = chaiPostcard(
@@ -849,12 +848,36 @@ el("seedBtn").addEventListener("click", () => {
   updateLabels();
   toast("A fresh road awaits.");
 });
-el("startBtn").addEventListener("click", () => {
-  started = true;
-  paused = false;
-  el("loading").remove();
+el("startBtn").addEventListener("click", async () => {
+  const choice = document.querySelector(
+    'input[name="openingDrive"]:checked',
+  ).value;
+  el("startBtn").disabled = true;
   audio.start();
   controls.clear();
+  try {
+    if (choice !== "free") {
+      el("openingStatus").textContent = "Preparing your Pune journey…";
+      el("discoveryDrive").value = choice;
+      if (driveMode !== "pune" || path.nav.exploration) {
+        saved.cityRoute = "pilot";
+        el("driveMode").value = "pune";
+        await switchMode();
+      }
+      if (!experience || driveMode !== "pune")
+        throw Error("Pune could not load. Try Free Drive or retry.");
+      await startJourney();
+      if (experience.status !== "active")
+        throw Error("The journey could not load. Please retry.");
+    }
+    started = true;
+    paused = false;
+    el("loading").remove();
+  } catch (error) {
+    el("openingStatus").textContent = error.message;
+    el("startBtn").disabled = false;
+    paused = true;
+  }
 });
 addEventListener("resize", () => {
   renderer.setSize(innerWidth, innerHeight);
@@ -967,6 +990,8 @@ function loop(now) {
     world,
     car,
     rig.mode,
+    time,
+    reduced,
   );
   car.update(paused ? 0 : dt, visual.speed, env.night, vehicle.braking);
   updateWorld();
@@ -1185,6 +1210,7 @@ window.wanderlane = {
           : null,
       journal: journal.snapshot,
       experience: experience?.snapshot ?? { available: false },
+      deliveryMoment: flowerView.snapshot,
       biome,
       time: TIMES[env.mode],
       auto,

@@ -68,7 +68,7 @@ export class CityActors {
       if (!PUNE_SCENES[p.id]) dressLandmark(p, b, r);
       // A compact, original kit with safe, visibly distinct street edges.
       if (p.kind === "shops") {
-        shopfronts(b, r);
+        shopfronts(b, r, this.quality);
         b(0, -0.06, -5.15, 3.4, 0.12, 1.8, r.ochre);
         renderEdge(
           {
@@ -152,8 +152,19 @@ export class CityActors {
       people.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       heads.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       people.castShadow = heads.castShadow = true;
-      group.add(people, heads);
-      const record = { p, y, people, heads, count, phase: 0, near: false };
+      const purchases = new THREE.InstancedMesh(this.head, r.cream, count);
+      purchases.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      group.add(people, heads, purchases);
+      const record = {
+        p,
+        y,
+        people,
+        heads,
+        purchases,
+        count,
+        phase: 0,
+        near: false,
+      };
       records.push(record);
       this.active.add(record);
       const labels =
@@ -242,7 +253,7 @@ export class CityActors {
     };
   }
   pose(r, time) {
-    const { p, y, count, people, heads } = r,
+    const { p, y, count, people, heads, purchases } = r,
       co = Math.cos(p.yaw),
       si = Math.sin(p.yaw),
       d = this.dummy;
@@ -272,14 +283,39 @@ export class CityActors {
       put(people, i * 6 + 1, x - 0.13, 0.46, z, 0.15, 0.62, 0.17, walk);
       put(people, i * 6 + 2, x + 0.13, 0.46, z, 0.15, 0.62, 0.17, -walk);
       put(people, i * 6 + 3, x - 0.28, 1.13, z, 0.13, 0.5, 0.15, -walk);
-      put(people, i * 6 + 4, x + 0.28, 1.13, z, 0.13, 0.5, 0.15, walk);
+      const reach = motion.reach ?? 0;
+      put(
+        people,
+        i * 6 + 4,
+        x + 0.28,
+        1.13 + reach * 0.1,
+        z + reach * 0.18,
+        0.13,
+        0.5,
+        0.15,
+        motion.carry ? -0.8 : walk - reach * 1.1,
+      );
+      const held = !!motion.carry;
+      const cup = motion.purchase === "cup";
+      put(
+        purchases,
+        i,
+        x + 0.28,
+        cup ? 1.18 : 0.8,
+        z + 0.23,
+        held ? (cup ? 0.12 : 0.27) : 0,
+        held ? (cup ? 0.16 : 0.34) : 0,
+        held ? (cup ? 0.12 : 0.2) : 0,
+      );
       put(people, i * 6 + 5, x, 0.075, z, 0.45, 0.15, 0.3);
       put(heads, i, x, 1.55, z, 0.28, 0.32, 0.28);
     }
     people.instanceMatrix.needsUpdate = true;
     heads.instanceMatrix.needsUpdate = true;
+    purchases.instanceMatrix.needsUpdate = true;
     people.computeBoundingSphere();
     heads.computeBoundingSphere();
+    purchases.computeBoundingSphere();
   }
   update(v, time, reduced, night, season, experience) {
     this.res.glow.emissiveIntensity = 0.7 + night * 2;
@@ -314,6 +350,14 @@ export class CityActors {
         SHOPS.length,
       marketClusters: [...this.active].filter((r) => r.p.kind === "shops")
         .length,
+      activities: [...this.active].some((r) => r.p.kind === "shops")
+        ? [
+            "browsing",
+            "collecting chai",
+            "carrying purchase",
+            "tending counter",
+          ]
+        : [],
       stalls,
       busStops,
       scenes: [...this.active].map((r) => r.p.id),

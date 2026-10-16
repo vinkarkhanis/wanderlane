@@ -82,6 +82,7 @@ export function renderFrontages(plan, quality, block, add, shared, res) {
     };
     const body = p.seed % 2 ? res.plaster : res.cream;
     const accent = p.seed % 2 ? res.teal : res.terracotta;
+    const detailed = p.detailed && quality !== "Low";
     // A continuous ground floor and inset-looking dark openings break the
     // repeated window atlas at pedestrian height. Canopies stay above cars.
     b(0, 1.55, 0.1, p.width, 3.1, 0.18, body);
@@ -132,10 +133,60 @@ export function renderFrontages(plan, quality, block, add, shared, res) {
           add,
           res.sign,
         );
+        if (detailed) {
+          // Stock matches the fictional sign: grocery, chai, flowers, repairs.
+          const kind = (p.seed + i) % 4;
+          for (let j = 0; j < 3; j++) {
+            const x = u + bay * (-0.12 + j * 0.15);
+            if (kind === 0 || kind === 2) {
+              b(x, 0.18, 1.02, bay * 0.13, 0.3, 0.42, res.terracotta);
+              b(
+                x,
+                0.4,
+                1.02,
+                bay * 0.12,
+                0.16,
+                0.36,
+                kind === 0 ? res.leaf : res.cream,
+              );
+              if (kind === 2) {
+                b(x, 0.6, 1.02, 0.04, 0.35, 0.04, res.leaf);
+                b(
+                  x,
+                  0.79,
+                  1.02,
+                  0.2,
+                  0.15,
+                  0.2,
+                  j % 2 ? res.terracotta : res.cream,
+                );
+              }
+            } else if (kind === 1) {
+              b(x, 1.05, 0.74, 0.16, 0.22, 0.16, res.cream);
+              b(x, 1.19, 0.74, 0.2, 0.04, 0.2, res.frame);
+            } else {
+              b(x, 0.26, 1.02, 0.12, 0.45, 0.32, res.frame);
+              b(x, 0.51, 1.02, 0.2, 0.06, 0.4, res.shutter);
+            }
+          }
+          for (
+            let stripe = -bay / 2 + 0.3;
+            stripe < bay / 2 - 0.2;
+            stripe += 0.48
+          )
+            b(u + stripe, 3.195, 0.68, 0.18, 0.025, 1.24, res.cream);
+          b(u - bay * 0.38, 1.02, 0.5, 0.28, 0.38, 0.22, res.shutter);
+        }
       } else {
         b(u, 1.22, 0.24, 1.45, 2.35, 0.14, res.frame);
         b(u, 1.22, 0.33, 1.2, 2.1, 0.06, res.glass);
         b(u, 2.65, 0.55, 2.4, 0.15, 1.1, accent);
+        if (detailed) {
+          b(u, 0.1, 0.68, 1.65, 0.2, 1.1, res.stone);
+          b(u + 0.52, 1.1, 0.39, 0.06, 0.25, 0.06, res.cream);
+          b(u - 0.97, 1.28, 0.36, 0.22, 0.32, 0.16, res.shutter);
+          b(u - 0.97, 1.9, 0.42, 0.2, 0.12, 0.2, res.lamp);
+        }
         if (i === 0)
           sign(
             p,
@@ -182,10 +233,39 @@ export function renderFrontages(plan, quality, block, add, shared, res) {
     for (let floor = 1; floor <= floors; floor++) {
       if (floor * 3.1 + 0.2 >= p.height) break;
       b(0, floor * 3.1, 0.12, p.width, 0.16, 0.24, body);
+      if (detailed && floor <= 3 && floor * 3.1 + 2.4 < p.height) {
+        for (let u = -p.width / 2 + 1.65; u < p.width / 2 - 1.4; u += 3.5) {
+          b(u, floor * 3.1 + 1.3, 0.23, 1.65, 1.9, 0.12, res.frame);
+          b(
+            u,
+            floor * 3.1 + 1.3,
+            0.31,
+            1.42,
+            1.66,
+            0.06,
+            (p.seed + floor) % 3 ? res.glass : res.interior,
+          );
+          b(u, floor * 3.1 + 1.3, 0.36, 0.06, 1.66, 0.045, body);
+          b(u, floor * 3.1 + 2.32, 0.53, 1.92, 0.12, 0.86, body);
+        }
+      }
       if (!p.retail && floor > 1 && quality !== "Low") {
         for (let u = -p.width / 2 + 2; u < p.width / 2 - 1; u += 4.5) {
           b(u, floor * 3.1 + 0.2, 0.66, 2.6, 0.14, 1.2, body);
-          b(u, floor * 3.1 + 0.65, 1.2, 2.6, 0.8, 0.06, accent);
+          if (detailed) {
+            for (const railY of [0.32, 1.02])
+              b(u, floor * 3.1 + railY, 1.2, 2.6, 0.06, 0.06, res.frame);
+            for (let railX = -1.2; railX <= 1.21; railX += 0.3)
+              b(
+                u + railX,
+                floor * 3.1 + 0.66,
+                1.2,
+                0.045,
+                0.72,
+                0.045,
+                res.frame,
+              );
+          } else b(u, floor * 3.1 + 0.65, 1.2, 2.6, 0.8, 0.06, accent);
           if ((p.seed + floor) % 3 === 0) {
             b(
               u + 0.8,
@@ -198,6 +278,56 @@ export function renderFrontages(plan, quality, block, add, shared, res) {
             );
             b(u + 0.8, floor * 3.1 + 1.07, 0.9, 0.5, 0.25, 0.4, res.leaf);
           }
+        }
+      }
+    }
+    if (detailed) {
+      const pipeX = p.width / 2 - 0.3;
+      b(
+        pipeX,
+        Math.min(p.height, 12) / 2,
+        0.42,
+        0.09,
+        Math.min(p.height, 12),
+        0.09,
+        res.frame,
+      );
+      for (let y = 1; y < Math.min(p.height, 12); y += 2.5)
+        b(pipeX, y, 0.39, 0.2, 0.07, 0.15, res.shutter);
+      // Paving and furniture occupy only the separately validated forecourt.
+      if (p.apron > 2.7) {
+        for (let u = -p.width / 2 + 0.6; u < p.width / 2 - 0.5; u += 1.2)
+          for (let v = 1.7; v < p.apron - 0.4; v += 0.8)
+            b(
+              u,
+              0.078,
+              v,
+              1.15,
+              0.016,
+              0.75,
+              (Math.round(u * 5) + p.seed) % 3 ? res.stone : res.plaster,
+            );
+        const u = -p.width / 2 + 1.15;
+        b(u, 0.48, 2.05, 1.8, 0.12, 0.5, accent);
+        for (const leg of [-0.65, 0.65])
+          b(u + leg, 0.23, 2.05, 0.1, 0.46, 0.45, res.frame);
+        b(u, 0.83, 1.84, 1.8, 0.6, 0.08, accent);
+        // Plant the edge of the separately cleared forecourt, leaving a
+        // central approach to the door and the public road corridor open.
+        for (const side of [-1, 1]) {
+          const x = side * (p.width / 2 - 0.7);
+          b(x, 0.23, p.apron - 0.65, 0.85, 0.46, 0.9, res.stone);
+          b(x, 0.67, p.apron - 0.65, 0.72, 0.48, 0.76, res.leaf);
+        }
+        if (!p.retail && p.width > 8) {
+          const v = p.apron - 0.2;
+          for (const side of [-1, 1]) {
+            const width = p.width / 2 - 1.3;
+            b(side * (1.3 + width / 2), 0.37, v, width, 0.74, 0.25, body);
+            b(side * 1.3, 0.85, v, 0.3, 1.7, 0.3, res.stone);
+            b(side * 1.3, 1.75, v, 0.36, 0.12, 0.36, res.lamp);
+          }
+          b(0, 0.08, p.apron / 2, 2.25, 0.08, p.apron, res.stone);
         }
       }
     }

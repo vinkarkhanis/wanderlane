@@ -16,14 +16,74 @@ export class FlowerDeliveryView {
     this.pink = material(0xff6fa0);
     this.gold = material(0xffcc57);
     this.cream = material(0xf2ddbf);
+    this.skin = material(0xbc8f70);
+    this.cloth = material(0x527c80);
     this.box = new THREE.BoxGeometry(1, 1, 1);
     this.bloom = new THREE.SphereGeometry(0.09, 6, 4);
     this.geometries.push(this.box, this.bloom);
     this.pickup = this.porch("BANER FLOWERS", false);
     this.destination = this.porch("THE COURTYARD", true);
+    this.recipient = this.person();
+    this.destination.add(this.recipient);
+    this.deliveryStarted = null;
+    this.deliveryProgress = 0;
+    this.finishedByPlayer = false;
     this.cargo = this.flowers();
     this.cargo.scale.setScalar(0.65);
     scene.add(this.pickup, this.destination);
+  }
+  person() {
+    const group = new THREE.Group();
+    this.block(group, 0, 1.02, 0, 0.44, 0.65, 0.27, this.cloth);
+    for (const x of [-0.12, 0.12]) {
+      this.block(group, x, 0.4, 0, 0.15, 0.7, 0.18, this.wood);
+      this.block(group, x, 0.07, -0.06, 0.18, 0.14, 0.32, this.wood);
+    }
+    const head = new THREE.Mesh(this.bloom, this.skin);
+    head.scale.set(1.65, 2, 1.6);
+    head.position.y = 1.55;
+    group.add(head);
+    this.block(group, 0, 1.72, 0.025, 0.3, 0.1, 0.28, this.wood);
+    for (const x of [-0.06, 0.06])
+      this.block(group, x, 1.58, -0.145, 0.025, 0.025, 0.02, this.wood);
+    for (const side of [-1, 1]) {
+      const arm = new THREE.Group();
+      arm.position.set(side * 0.28, 1.27, 0);
+      this.block(arm, 0, -0.18, 0, 0.13, 0.4, 0.15, this.cloth);
+      this.block(arm, 0, -0.42, 0, 0.12, 0.12, 0.14, this.skin);
+      group.add(arm);
+      group.userData[side < 0 ? "leftArm" : "rightArm"] = arm;
+    }
+    return group;
+  }
+  poseDelivery(progress, reduced = false) {
+    const reach = Math.sin((Math.min(1, progress * 2) * Math.PI) / 2);
+    this.recipient.position.set(-0.7, 0, 4.35 - reach * 0.85);
+    this.recipient.userData.leftArm.rotation.x = reach * 1.05;
+    this.recipient.userData.rightArm.rotation.x = reach * 1.05;
+    this.recipient.userData.rightArm.rotation.z =
+      progress > 0.6 && !reduced
+        ? Math.sin((progress - 0.6) * Math.PI * 5) * 0.25
+        : 0;
+    const bouquet = this.destination.userData.bouquet;
+    bouquet.position.set(-0.7, 0.93, 3.22 + (1 - reach) * 0.65);
+    bouquet.scale.setScalar(0.85);
+    this.deliveryProgress = progress;
+  }
+  finishHandover() {
+    this.finishedByPlayer = true;
+    this.poseDelivery(1, true);
+  }
+  get snapshot() {
+    return {
+      progress: this.deliveryProgress,
+      stage:
+        this.deliveryStarted === null
+          ? "waiting"
+          : this.deliveryProgress < 1
+            ? "receiving flowers"
+            : "flowers received",
+    };
   }
   block(group, x, y, z, w, h, d, material) {
     const mesh = new THREE.Mesh(this.box, material);
@@ -78,6 +138,14 @@ export class FlowerDeliveryView {
       for (const x of [-1.5, 1.5])
         this.block(group, x, 1.2, 4.45, 0.18, 2.4, 0.5, this.wood);
       this.block(group, 0, 1.45, 4.76, 0.85, 1.5, 0.09, this.wood);
+      // Warm tiled porch, planters and a shelf stay behind the usable bay.
+      this.block(group, 0, 2.65, 4.12, 3.8, 0.18, 1.65, this.wood);
+      this.block(group, 0, 2.51, 4.1, 2.6, 0.08, 0.1, this.gold);
+      for (const x of [-1.4, 1.4]) {
+        this.block(group, x, 0.23, 3.6, 0.4, 0.46, 0.44, this.wood);
+        this.block(group, x, 0.65, 3.6, 0.48, 0.44, 0.48, this.leaf);
+      }
+      this.block(group, 0.8, 1.28, 4.1, 0.95, 0.08, 0.65, this.wood);
     }
     const bouquet = this.flowers();
     bouquet.position.set(0.8, 1.32, 4.1);
@@ -85,7 +153,7 @@ export class FlowerDeliveryView {
     group.userData.bouquet = bouquet;
     return group;
   }
-  update(s, world, car, cameraMode) {
+  update(s, world, car, cameraMode, time = 0, reduced = false) {
     const visible =
       s?.tripId === "flower-delivery" &&
       ["active", "completed"].includes(s.status);
@@ -97,6 +165,11 @@ export class FlowerDeliveryView {
       car.spec?.kind === "bike" ? 0.85 : 1.05,
       car.spec?.kind === "bike" ? -0.65 : -1.65,
     );
+    if (!visible || s.cargo !== "delivered") {
+      this.deliveryStarted = null;
+      this.finishedByPlayer = false;
+      this.poseDelivery(0, true);
+    }
     if (!visible) return;
     for (const [group, id] of [
       [this.pickup, "baner-pause"],
@@ -113,6 +186,15 @@ export class FlowerDeliveryView {
     }
     this.pickup.userData.bouquet.visible = s.cargo === "awaiting pickup";
     this.destination.userData.bouquet.visible = s.cargo === "delivered";
+    if (s.cargo === "delivered") {
+      this.deliveryStarted ??= time;
+      this.poseDelivery(
+        reduced || this.finishedByPlayer
+          ? 1
+          : Math.min(1, (time - this.deliveryStarted) / 4),
+        reduced,
+      );
+    }
   }
   dispose() {
     for (const group of [this.pickup, this.destination, this.cargo])

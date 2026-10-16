@@ -1,6 +1,9 @@
 # Monsoon Flower Delivery
 
-In Pune City, select **Monsoon Flower Delivery** under Discovery drive and
+Choose **Flower Delivery** on the opening screen to start directly, including
+when the saved world is Endless. Free Drive keeps the saved world; Evening
+Chai Run starts its existing Pune journey. The duration labels are estimates,
+not timers. In Pune City, select **Monsoon Flower Delivery** under Discovery drive and
 press **Start drive**. The fictional Baner flower stall uses the existing
 validated Baner parking parcel. Stop in the marked bay for two continuous
 seconds below 0.5 m/s to collect the bouquet. Auto-drive handles both stops
@@ -10,7 +13,9 @@ Carry the flowers along the existing Baner–Pashan Explorer, choosing Park
 Ridge Road or the approximately 140 m longer Wakeshwar Road detour. Park
 at the fictional courtyard porch on the Pashan approach for two seconds
 to deliver them. The flowers move from the stall to the vehicle, then to
-the porch. Completion displays a thank-you and plays the existing arrival
+the porch. A courtyard recipient steps forward and accepts the bouquet over
+four seconds; reduced motion shows the settled pose immediately. Completion
+displays a thank-you and plays the existing arrival
 chime. Driving quality is optional feedback and never blocks a delivery.
 
 The story starts about 80 m before the Baner bay, at canonical route
@@ -25,6 +30,15 @@ saves a 400 × 293 JPEG thumbnail in the Travel scrapbook with the vehicle,
 season and selected route. Up to four recent destination photos persist
 on this device. Older discovery data remains readable. Blocked storage
 permits an in-memory scrapbook; full PNGs are saved only by downloading.
+The completion panel also offers **Save this moment**. Both controls compose
+the recipient and bouquet under the porch and settle the interaction before
+capturing, so an early click cannot save an empty-handed arrival.
+
+The route's existing frontages now receive the same detail treatment as the
+Baner hero stretch. Cleared forecourts include edge planters, residential gate
+piers and an open central entrance. Market roofs have varied parapets; existing
+customer paths now include browsing gestures, chai collection and purchases
+carried away from the counter. All artwork remains procedural and fictional.
 
 Validation commands:
 

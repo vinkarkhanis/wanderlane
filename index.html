@@ -177,8 +177,45 @@
         <p>Take the long way.</p>
         <div class="rule"></div>
         <p class="intro">
-          An open road. A changing sky.<br />Choose your ride, and nowhere you
-          need to be.
+          An open road. A changing sky.<br />Where shall we go today?
+        </p>
+        <fieldset id="driveChoices">
+          <legend>Choose your drive</legend>
+          <label class="drive-card">
+            <input type="radio" name="openingDrive" value="free" checked />
+            <span class="drive-art free-art" aria-hidden="true">↝</span>
+            <span
+              ><strong>Free Drive</strong
+              ><small>Your saved world · stay as long as you like</small
+              ><span>Choose your own road. No destination.</span></span
+            >
+          </label>
+          <label class="drive-card">
+            <input type="radio" name="openingDrive" value="evening-chai-run" />
+            <span class="drive-art chai-art" aria-hidden="true">☕</span>
+            <span
+              ><strong>Evening Chai Run</strong
+              ><small>Pune · about 15–25 min</small
+              ><span
+                >Sunset streets, a choice of roads, a warm chai stop.</span
+              ></span
+            >
+          </label>
+          <label class="drive-card">
+            <input type="radio" name="openingDrive" value="flower-delivery" />
+            <span class="drive-art flower-art" aria-hidden="true">✿</span>
+            <span
+              ><strong>Flower Delivery</strong
+              ><small>Pune · about 10–15 min</small
+              ><span
+                >Collect a bouquet. Bring a little colour to a rainy
+                courtyard.</span
+              ></span
+            >
+          </label>
+        </fieldset>
+        <p id="openingStatus" role="status">
+          Manual or auto-drive · no time limit
         </p>
         <button id="startBtn" disabled>Preparing your drive…</button
         ><small>WASD / arrows to drive · Space for auto-drive</small>

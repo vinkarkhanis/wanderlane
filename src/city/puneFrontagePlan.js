@@ -3,6 +3,24 @@ import { buildingStyle, HERO_ROUTE } from "./puneStyle.js";
 import { streetCharacter } from "./puneJourney.js";
 
 export const NEIGHBOURHOOD = { start: HERO_ROUTE.start, length: 500 };
+const heroSamples = new WeakMap();
+function onHeroStreet(path, x, z) {
+  if (!heroSamples.has(path)) {
+    const samples = [];
+    // Both authored drives share the richer roadside treatment. Canonical
+    // distances keep coverage stable when choosing the detour.
+    for (const [start, length] of [
+      [HERO_ROUTE.start, HERO_ROUTE.length],
+      [1439, 3500],
+    ])
+      for (let s = start; s <= start + length; s += 20) {
+        const q = path.sampleAtDistance(path.journeyDistance?.(s) ?? s, {});
+        samples.push([q.x, q.z]);
+      }
+    heroSamples.set(path, samples);
+  }
+  return heroSamples.get(path).some((q) => Math.hypot(q[0] - x, q[1] - z) < 55);
+}
 
 // These are original local-style additions to imported buildings, not surveyed
 // businesses. Keep the footprints and road geometry authoritative.
@@ -112,6 +130,7 @@ export function frontagePlan(data, path, routePlan) {
           height: building.height,
           family: style.family,
           seed: style.seed,
+          detailed: onHeroStreet(path, x, z),
           distance,
           character: streetCharacter(road),
           retail:

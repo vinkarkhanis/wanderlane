@@ -8,6 +8,24 @@ export class CityTripUI {
     this.details.textContent = "Journey details";
     this.details.setAttribute("aria-expanded", "false");
     this.panel.append(this.details);
+    this.delivery = document.createElement("div");
+    this.delivery.id = "deliveryMoment";
+    this.delivery.hidden = true;
+    const note = document.createElement("p");
+    note.textContent =
+      "“You brought them through the rain! Come, leave them here. They’re lovely.”";
+    const capture = document.createElement("button");
+    capture.type = "button";
+    capture.id = "deliveryPostcard";
+    capture.textContent = "Save this moment →";
+    this.onCapture = () => document.getElementById("postcardBtn").click();
+    capture.addEventListener("click", this.onCapture);
+    this.capture = capture;
+    this.delivery.append(note, capture);
+    this.panel.insertBefore(
+      this.delivery,
+      this.panel.querySelector(".trip-actions"),
+    );
     this.onDetails = () => {
       const compact = this.panel.classList.toggle("trip-compact");
       this.details.setAttribute("aria-expanded", String(!compact));
@@ -37,6 +55,7 @@ export class CityTripUI {
     };
     const active = s.status === "active",
       done = s.status === "completed";
+    this.delivery.hidden = !(done && s.cargo === "delivered");
     const arrival = active && s.arrival && s.stopping && s.stopRemaining < 70;
     this.panel.dataset.status = s.status;
     text(
@@ -118,6 +137,8 @@ export class CityTripUI {
     this.cancel.hidden = !active && !done;
   }
   dispose() {
+    this.capture.removeEventListener("click", this.onCapture);
+    this.delivery.remove();
     this.details.removeEventListener("click", this.onDetails);
     this.details.remove();
     this.start.removeEventListener("click", this.onStart);

@@ -16,6 +16,18 @@ export function chaiPostcard(renderer, scene, camera, place, groundY, title) {
       place.z - 7 * si - 8 * co,
     );
     photoCamera.lookAt(place.x + si * 1.5, groundY + 1.2, place.z + co * 1.5);
+    if (place.id === "flower-delivery") {
+      photoCamera.position.set(
+        place.x + 4.8 * co - 6 * si,
+        groundY + 3.1,
+        place.z - 4.8 * si - 6 * co,
+      );
+      photoCamera.lookAt(
+        place.x - 0.3 * co + 2.8 * si,
+        groundY + 1.2,
+        place.z + 0.3 * si + 2.8 * co,
+      );
+    }
   } else {
     photoCamera = camera.clone();
     photoCamera.aspect = w / h;
