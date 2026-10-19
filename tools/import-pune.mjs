@@ -1,6 +1,7 @@
 import { applyRoadElevation } from "./lib/road-elevation.mjs";
 import { inside } from "./lib/geometry.mjs";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, mkdir } from "node:fs/promises";
+import { writeFile } from "./lib/write-if-changed.mjs";
 import { createHash } from "node:crypto";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { PUNE } from "./lib/pune-config.mjs";
@@ -11,6 +12,8 @@ import { elevationSource } from "./lib/elevation-processor.mjs";
 import { makeRoute } from "./lib/route-processor.mjs";
 import { writeChunks, json } from "./lib/chunk-writer.mjs";
 import { walkwaysFromOSM } from "./lib/walkway-processor.mjs";
+import { project } from "./lib/projection.mjs";
+import { SWARGATE } from "../src/city/swargatePlan.js";
 const arg = (name) => {
   const i = process.argv.indexOf(name);
   return i < 0 ? undefined : process.argv[i + 1];
@@ -84,8 +87,17 @@ const buildings = buildingsFromOSM(osm, graph, land, elevation, config, report);
 applyRoadElevation(graph, elevation, report);
 let pilot;
 if (expanded) {
+  const southern = metadata.extensions?.some(
+    (e) => e.id === "sinhgad-swargate",
+  );
   pilot = JSON.parse(
-    gunzipSync(await readFile("data-sources/pune/pilot-navigation.json.gz")),
+    gunzipSync(
+      await readFile(
+        southern
+          ? "data-sources/pune/western-navigation.json.gz"
+          : "data-sources/pune/pilot-navigation.json.gz",
+      ),
+    ),
   );
   const key = (r) => `${r.way}/${r.a}/${r.b}`;
   const old = new Set(pilot.roads.map(key));
@@ -97,7 +109,8 @@ if (expanded) {
   for (const edges of Object.values(graph.adj))
     for (const e of edges) e.road = ids.get(key(graph.roads[e.road]));
   graph.roads = roads.map((r, id) => ({ ...r, id }));
-  report.preservedPilotRoads = pilot.roads.length;
+  if (southern) report.preservedWesternRoads = pilot.roads.length;
+  else report.preservedPilotRoads = pilot.roads.length;
 }
 const originalHeight = elevation.height;
 for (const l of land)
@@ -118,44 +131,93 @@ elevation.height = (x, z) => {
   return originalHeight(x, z);
 };
 const route = pilot?.route || makeRoute(graph, osm, config, report);
-const explorationRoutes = expanded
-  ? [
+const westernRoutes =
+  expanded && !pilot?.explorationRoutes
+    ? [
+        {
+          id: "sus-hills",
+          name: "Sus–Pashan Hill Roads",
+          targets: [
+            [18.561, 73.783],
+            [18.565, 73.758],
+            [18.541, 73.766],
+            [18.544, 73.79],
+          ],
+        },
+        {
+          id: "bavdhan",
+          name: "Bavdhan Outskirts",
+          targets: [
+            [18.54, 73.794],
+            [18.517, 73.774],
+            [18.526, 73.755],
+            [18.545, 73.766],
+          ],
+        },
+        {
+          id: "aundh-retail",
+          name: "Aundh & Baner City Loop",
+          targets: [
+            [18.56, 73.799],
+            [18.563, 73.808],
+            [18.58, 73.792],
+            [18.564, 73.782],
+          ],
+        },
+      ].map(({ id, name, targets }) => ({
+        ...makeRoute(graph, osm, { ...config, routeTargets: targets }, report),
+        id,
+        name,
+      }))
+    : [];
+const explorationRoutes = pilot?.explorationRoutes || westernRoutes;
+if (expanded && metadata.extensions?.some((e) => e.id === "sinhgad-swargate")) {
+  explorationRoutes.push({
+    ...makeRoute(
+      graph,
+      osm,
       {
-        id: "sus-hills",
-        name: "Sus–Pashan Hill Roads",
-        targets: [
-          [18.561, 73.783],
-          [18.565, 73.758],
-          [18.541, 73.766],
-          [18.544, 73.79],
+        ...config,
+        routeTargets: [
+          [18.4855, 73.8281],
+          [18.5, 73.843],
+          [18.50055, 73.85865],
+          [18.4997, 73.85832],
+          [18.4895, 73.846],
         ],
       },
-      {
-        id: "bavdhan",
-        name: "Bavdhan Outskirts",
-        targets: [
-          [18.54, 73.794],
-          [18.517, 73.774],
-          [18.526, 73.755],
-          [18.545, 73.766],
-        ],
-      },
-      {
-        id: "aundh-retail",
-        name: "Aundh & Baner City Loop",
-        targets: [
-          [18.56, 73.799],
-          [18.563, 73.808],
-          [18.58, 73.792],
-          [18.564, 73.782],
-        ],
-      },
-    ].map(({ id, name, targets }) => ({
-      ...makeRoute(graph, osm, { ...config, routeTargets: targets }, report),
-      id,
-      name,
-    }))
-  : [];
+      report,
+    ),
+    id: "sinhgad-swargate",
+    name: "Sinhgad Road–Swargate",
+  });
+  const southern = explorationRoutes.at(-1),
+    p = project(...SWARGATE.approach, config.origin);
+  let start = 0,
+    gap = Infinity;
+  for (let i = 0; i < southern.edges.length; i++) {
+    const edge = southern.edges[i],
+      road = graph.roads[edge.road],
+      q = edge.dir === 1 ? road.p : road.q;
+    const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    if (d < gap) {
+      gap = d;
+      start = i;
+    }
+  }
+  // Begin on the real approach so the landmark appears early in the drive.
+  for (let distance = 0; distance < 150;) {
+    start = (start - 1 + southern.edges.length) % southern.edges.length;
+    distance += graph.roads[southern.edges[start].road].length;
+  }
+  southern.edges = [
+    ...southern.edges.slice(start),
+    ...southern.edges.slice(0, start),
+  ];
+  southern.startLabel = "Swargate bus station approach";
+  southern.selection =
+    "Directed source-node route through Sinhgad Road and the public Swargate station approach; no invented road links.";
+}
 report.explorationRoutes = explorationRoutes.map((r) => ({
   id: r.id,
   name: r.name,
@@ -240,9 +302,7 @@ await writeFile(
   root + "/manifest.json",
   json({
     version: 1,
-    name: expanded
-      ? "Pune & western outskirts"
-      : "Pune — Baner–Aundh–Pashan pilot",
+    name: expanded ? "Pune & outskirts" : "Pune — Baner–Aundh–Pashan pilot",
     bounds: config.bounds,
     localBounds: osm.bounds,
     origin: PUNE.origin,

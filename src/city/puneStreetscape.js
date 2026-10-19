@@ -1,4 +1,5 @@
 import { inside, nearest } from "./spatial.js";
+import { inStationGrounds } from "./swargatePlan.js";
 
 // Pavement inferred only beside urban buildings or explicitly tagged sidewalks.
 // Source highway centre lines remain unchanged; these surfaces are decorative.
@@ -34,6 +35,7 @@ export function pavementPanels(data, path, junctions, quality = "Medium") {
         const off = r.width / 2 + 1.25,
           xx = x + nx * off * side,
           zz = z + nz * off * side;
+        if (inStationGrounds(xx, zz, path.manifest.origin)) continue;
         const urban = data.buildings.some(
           (b) =>
             xx >= b.bounds[0] - 22 &&

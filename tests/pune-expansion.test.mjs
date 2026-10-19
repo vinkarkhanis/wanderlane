@@ -19,7 +19,7 @@ test("expanded map preserves every original road and curated route exactly", () 
   assert.ok(nav.roads.length > original.roads.length * 3);
 });
 test("all exploration loops follow legal connected OSM roads and drive a complete lap", () => {
-  assert.equal(new Set(nav.explorationRoutes.map((r) => r.id)).size, 3);
+  assert.equal(new Set(nav.explorationRoutes.map((r) => r.id)).size, 4);
   for (const route of nav.explorationRoutes) {
     for (let i = 0; i < route.edges.length; i++) {
       const e = route.edges[i],
@@ -28,7 +28,7 @@ test("all exploration loops follow legal connected OSM roads and drive a complet
       assert.equal(e.to, n.from);
       assert.ok(!r.oneway || r.oneway === e.dir);
     }
-    assert.ok(route.length > 10000);
+    assert.ok(route.length > (route.id === "sinhgad-swargate" ? 5000 : 10000));
     const path = new CityPath({ ...nav, route, exploration: true }, m),
       v = new Vehicle(path, "truck");
     v.lane = -1.6;
@@ -48,6 +48,53 @@ test("all exploration loops follow legal connected OSM roads and drive a complet
     }
     assert.ok(lap, route.id + " completes");
     assert.ok(maxGap < 5, route.id + " gap " + maxGap);
+  }
+});
+
+test("southern corridor preserves western roads and loops, and reaches both named areas", () => {
+  const western = JSON.parse(
+    gunzipSync(readFileSync("data-sources/pune/western-navigation.json.gz")),
+  );
+  assert.deepEqual(nav.roads.slice(0, western.roads.length), western.roads);
+  assert.deepEqual(
+    nav.explorationRoutes.slice(0, western.explorationRoutes.length),
+    western.explorationRoutes,
+  );
+  const route = nav.explorationRoutes.find((r) => r.id === "sinhgad-swargate");
+  const roads = route.edges.map((e) => nav.roads[e.road]);
+  assert.ok(
+    roads.some((r) =>
+      /sinh|tanaji|सिंहगड|तानाजी/i.test(r.tags.name || r.tags["name:en"] || ""),
+    ),
+    "route uses mapped Sinhgad / Tanaji Malusare Road",
+  );
+  for (const [lat, lon] of [
+    [18.4855, 73.8281],
+    [18.5012, 73.857],
+  ]) {
+    const x =
+      (((lon - m.origin.lon) * Math.PI) / 180) *
+      6371008.8 *
+      Math.cos((m.origin.lat * Math.PI) / 180);
+    const z = (((m.origin.lat - lat) * Math.PI) / 180) * 6371008.8;
+    assert.ok(
+      roads.some((r) => Math.hypot(r.p[0] - x, r.p[1] - z) < 200),
+      `reaches ${lat},${lon}`,
+    );
+  }
+  for (const road of roads) {
+    const x = (road.p[0] + road.q[0]) / 2,
+      z = (road.p[1] + road.q[1]) / 2;
+    assert.ok(
+      m.chunks.some(
+        (c) =>
+          x >= c.x &&
+          x < c.x + m.chunkSize &&
+          z >= c.z &&
+          z < c.z + m.chunkSize,
+      ),
+      "every route road has a streamed tile",
+    );
   }
 });
 test("OSM paths, land-use variety and shopping centres are imported, with bounded safe pavement panels", () => {

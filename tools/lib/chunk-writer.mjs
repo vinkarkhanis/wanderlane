@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
+import { writeFile } from "./write-if-changed.mjs";
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { round, clipRing } from "./geometry.mjs";

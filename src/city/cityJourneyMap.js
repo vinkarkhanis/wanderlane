@@ -1,5 +1,6 @@
 import { PUNE_FORK } from "./puneJourney.js";
 import { cityDistrict, nearbyCityPlaces } from "./endlessCityPlaces.js";
+import { stationFrame } from "./swargatePlan.js";
 
 export class CityJourneyMap {
   constructor() {
@@ -42,6 +43,17 @@ export class CityJourneyMap {
         : PUNE_FORK.roads;
     for (const id of other) draw(path.roads[id], "#8aaca0", 2);
     c.setLineDash([]);
+    const station = stationFrame(path.manifest.origin),
+      stationGap = Math.hypot(station.x - v.x, station.z - v.z);
+    const [sx, sz] = point([station.x, station.z]);
+    if (sx > 15 && sx < 185 && sz > 27 && sz < 143) {
+      c.fillStyle = "#edd06b";
+      c.fillRect(sx - 8, sz - 5, 16, 10);
+      c.fillStyle = "#173337";
+      c.font = "bold 8px Arial";
+      c.textAlign = "center";
+      c.fillText("BUS", sx, sz + 3);
+    }
     if (trip?.arrival) {
       const [x, y] = point([trip.arrival.x, trip.arrival.z]);
       c.fillStyle = "#f4d395";
@@ -69,7 +81,9 @@ export class CityJourneyMap {
     c.fillText("N ↑", 9, 14);
     document.getElementById("journeyMapLabel").textContent = path.nav
       .exploration
-      ? path.nav.route.name
+      ? stationGap < 220
+        ? "Swargate bus station"
+        : path.nav.route.name
       : trip?.status === "completed"
         ? "Parked · take a moment"
         : path.journeyChoice === "detour"

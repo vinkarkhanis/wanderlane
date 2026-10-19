@@ -21,7 +21,12 @@ try {
     () => window.wanderlane && !window.wanderlane.state.switching,
   );
   await page.click("#startBtn");
-  for (const id of ["sus-hills", "bavdhan", "aundh-retail"]) {
+  for (const id of [
+    "sus-hills",
+    "bavdhan",
+    "aundh-retail",
+    "sinhgad-swargate",
+  ]) {
     await page.click("#settingsBtn");
     await page.selectOption("#puneRoute", id);
     await page.waitForFunction(() => !window.wanderlane.state.switching);
@@ -63,7 +68,10 @@ try {
   await page.waitForFunction(
     () => window.wanderlane && !window.wanderlane.state.switching,
   );
-  assert.equal(await page.locator("#puneRoute").inputValue(), "aundh-retail");
+  assert.equal(
+    await page.locator("#puneRoute").inputValue(),
+    "sinhgad-swargate",
+  );
   await page.click("#startBtn");
   await page.click("#settingsBtn");
   await page.selectOption("#puneRoute", "pilot");
@@ -93,7 +101,7 @@ try {
   );
   await touch.tap("#startBtn");
   await touch.tap("#settingsBtn");
-  await touch.selectOption("#puneRoute", "bavdhan");
+  await touch.selectOption("#puneRoute", "sinhgad-swargate");
   await touch.waitForFunction(() => !window.wanderlane.state.switching);
   await touch.tap("#resumeBtn");
   const client = await touch.context().newCDPSession(touch),
@@ -117,7 +125,7 @@ try {
     type: "touchEnd",
     touchPoints: [],
   });
-  await touch.screenshot({ path: `${dir}/bavdhan-touch.png` });
+  await touch.screenshot({ path: `${dir}/sinhgad-swargate-touch.png` });
   report.touch = { speed: ts.speed, combined: true };
   assert.deepEqual(errors, []);
   report.errors = errors;

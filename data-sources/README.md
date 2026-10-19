@@ -3,14 +3,16 @@
 Map data © OpenStreetMap contributors, available under ODbL 1.0.
 [OpenStreetMap copyright](https://www.openstreetmap.org/copyright).
 
-The active map now covers **Pune and its western outskirts**, about 84 km²:
-73.745–73.834° E, 18.508–18.588° N. See
+The active map combines **western Pune and a Sinhgad Road–Swargate corridor**.
+Its enclosing bounds are 73.745–73.867° E, 18.477–18.588° N; these are not a claim of complete rectangular urban coverage. See
 [the expansion notes](../docs/pune-expansion.md) and
 [expansion metadata](pune/expansion-metadata.json). The merged source cache has
-261,340 elements. It retains the original pilot element versions and adds a
-bounded Overpass extract. Original routes and road IDs remain stable.
+441,063 elements. It retains the original pilot and western element versions and adds a
+bounded southern Overpass extract. Original routes and road IDs remain stable.
 `npm run import:pune` rebuilds this expanded cache without network access;
-`npm run fetch:pune:expansion` explicitly refreshes the source from Overpass.
+`npm run fetch:pune:south` explicitly merges the southern source from Overpass.
+`npm run fetch:pune:expansion` replaces the cache with the western-only extract;
+follow it with the southern fetch to restore the combined coverage.
 The in-game downloadable ODbL database offer contains the merged source.
 Buildings and sidewalks are stylized; terrain elevation remains synthetic.
 

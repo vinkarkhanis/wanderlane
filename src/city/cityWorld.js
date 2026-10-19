@@ -22,6 +22,14 @@ import {
   clearParkingApproach,
 } from "./puneJourney.js";
 import { pavementPanels, renderMappedMall } from "./puneStreetscape.js";
+import { roadPaint, renderRoadPaint } from "./puneRoadPaint.js";
+import { stationMaterials, renderSwargate } from "./swargateStation.js";
+import {
+  stationSceneBuilding,
+  inStationGrounds,
+  stationPadCell,
+} from "./swargatePlan.js";
+import { bridgePierPlan, renderBridgePiers } from "./puneBridgePiers.js";
 export const SEASONS = ["Summer", "Monsoon", "Winter"];
 const colors = {
   Summer: [0x9b9566, 0xa5ae74, 0x414548],
@@ -135,6 +143,7 @@ export class CityWorld {
     this.detailPlan = detailCandidates(path);
     this.edgePlan = edgeCandidates(path, this.detailPlan);
     this.junctionNodes = junctionNodes(path);
+    this.bridgePiers = bridgePierPlan(path);
     this.signalView = new CitySignalView(path);
     this.actors = new CityActors(path, quality);
     this.chaiStops = new ChaiStopView(quality);
@@ -174,6 +183,10 @@ export class CityWorld {
     Object.assign(this.res, vegetationResources("meadow", this.wind));
     const surfaces = benchmarkMaterials();
     Object.assign(this.res, surfaces.materials);
+    Object.assign(this.res, stationMaterials());
+    this.res.roadPaint = mat(0xddd9c8, { roughness: 0.96 });
+    this.res.curbYellow = mat(0xbda54f);
+    this.res.curbDark = mat(0x42433c);
     this.surfaceTextures = surfaces.textures;
     for (const key of ["cream", "ochre"]) {
       this.actors.res[key].map = this.res.concrete.map;
@@ -362,6 +375,23 @@ export class CityWorld {
         continue;
       y = Math.max(y, meshHeight(x, z, s.positions, s.indices));
     }
+    for (const chunk of this.chunks.values()) {
+      const pad = chunk.busStation?.pad;
+      if (
+        pad &&
+        x > pad.bounds[0] &&
+        x < pad.bounds[2] &&
+        z > pad.bounds[1] &&
+        z < pad.bounds[3] &&
+        stationPadCell(this.path, x, z)
+      )
+        y = Math.max(
+          y,
+          this.terrainHeight(c?.data || chunk.data, x, z) -
+            0.22 +
+            pad.groundOffset,
+        );
+    }
     return y;
   }
   activate(data) {
@@ -480,6 +510,16 @@ export class CityWorld {
                 p: [r.p[0] + nx * off, r.p[1] + nz * off],
                 q: [r.q[0] + nx * off, r.q[1] + nz * off],
               };
+            block(
+              (rail.p[0] + rail.q[0]) / 2,
+              (r.y0 + r.y1) / 2 + 0.27,
+              (rail.p[1] + rail.q[1]) / 2,
+              0.32,
+              0.54,
+              len,
+              Math.atan2(dx, dz),
+              this.res.concrete,
+            );
             add(roadRibbon(rail, 0.15, 0.85), this.res.trim);
             for (let t = 0; t < 1; t += 4 / len)
               block(
@@ -491,6 +531,27 @@ export class CityWorld {
                 0.12,
                 0,
                 this.res.trim,
+              );
+          }
+        } else if (inStationGrounds(mx, mz, this.manifest.origin, 100)) {
+          // Urban ramp approaches use retaining edges beside the forecourt,
+          // rather than wide grassy embankments covering the bus-station yard.
+          for (const side of [-1, 1]) {
+            const off = side * (r.width / 2 + 0.28),
+              x = mx + nx * off,
+              z = mz + nz * off;
+            const top = (r.y0 + r.y1) / 2,
+              bottom = this.terrainHeight(data, x, z) - 0.22;
+            if (top > bottom + 0.2)
+              block(
+                x,
+                (top + bottom) / 2,
+                z,
+                0.4,
+                top - bottom,
+                len,
+                Math.atan2(dx, dz),
+                this.res.concrete,
               );
           }
         } else {
@@ -579,7 +640,30 @@ export class CityWorld {
           );
         }
       }
+      renderRoadPaint(
+        r,
+        roadPaint(r, this.junctionNodes),
+        block,
+        this.res.roadPaint,
+      );
     }
+    const busStation = renderSwargate(
+      data,
+      this.path,
+      (x, z) => this.terrainHeight(data, x, z) - 0.22,
+      block,
+      add,
+      this.res,
+      owned,
+      this.quality,
+    );
+    const bridgeSupports = renderBridgePiers(
+      data,
+      this.bridgePiers,
+      (x, z) => this.terrainHeight(data, x, z) - 0.22,
+      block,
+      this.res,
+    );
     const streetParts = new Map();
     const streetBlock = (x, y, z, w, h, d, yaw, material) => {
       if (!streetParts.has(material)) streetParts.set(material, []);
@@ -656,8 +740,18 @@ export class CityWorld {
       (x, z) => this.terrainHeight(data, x, z) - 0.22,
     );
     const styles = {},
-      edges = tileEdges(data, this.edgePlan, this.quality);
-    const frontages = frontagePlan(data, this.path);
+      edges = tileEdges(data, this.edgePlan, this.quality).filter(
+        (p) => !inStationGrounds(p.x, p.z, this.manifest.origin),
+      );
+    const frontages = frontagePlan(
+      {
+        ...data,
+        buildings: data.buildings.filter(
+          (b) => !stationSceneBuilding(b, this.manifest.origin),
+        ),
+      },
+      this.path,
+    );
     renderFrontages(
       frontages,
       this.quality,
@@ -668,6 +762,7 @@ export class CityWorld {
     );
     let rooftopFittings = 0;
     for (const b of data.buildings) {
+      if (stationSceneBuilding(b, this.manifest.origin)) continue;
       renderMappedMall(b, streetBlock, this.res);
       if (b.style === "mall") {
         const canvas = document.createElement("canvas");
@@ -859,7 +954,9 @@ export class CityWorld {
     const rng = random(hashSeed(data.id)),
       trees = [[], [], []],
       grass = [];
-    const details = tileDetails(data, this.detailPlan, this.quality);
+    const details = tileDetails(data, this.detailPlan, this.quality).filter(
+      (p) => !inStationGrounds(p.x, p.z, this.manifest.origin),
+    );
     const signs = details.filter((p) => p.kind === "sign").slice(0, 8);
     let signMaterial;
     if (signs.length) {
@@ -920,6 +1017,7 @@ export class CityWorld {
       }
     }
     const safe = (x, z) => {
+      if (inStationGrounds(x, z, this.manifest.origin, 5)) return false;
       if (bays.some((p) => Math.hypot(p.x - x, p.z - z) < 7)) return false;
       if (STREET_SCENES.some((p) => Math.hypot(p.x - x, p.z - z) < 10))
         return false;
@@ -1022,6 +1120,7 @@ export class CityWorld {
         Object.values(this.frontageMaterials).includes(m) ||
         m === this.res.benchmarkFacade ||
         m === this.res.concrete ||
+        m.userData.station ||
         [
           this.actors.res.cream,
           this.actors.res.ochre,
@@ -1046,6 +1145,8 @@ export class CityWorld {
       rooftopFittings,
       frontages,
       journeyPlaces,
+      busStation,
+      bridgeSupports,
       pavementBays: bays.length + mappedPavements.length,
       edges,
       details,
@@ -1059,6 +1160,7 @@ export class CityWorld {
     );
     if (!c) return;
     for (const b of c.data.buildings) {
+      if (stationSceneBuilding(b, this.manifest.origin)) continue;
       if (
         v.x < b.bounds[0] - 1.2 ||
         v.x > b.bounds[2] + 1.2 ||
@@ -1177,6 +1279,13 @@ export class CityWorld {
       vegetation,
       details,
       signs,
+      bridgeSupports: [...this.chunks.values()].reduce(
+        (n, c) => n + c.bridgeSupports,
+        0,
+      ),
+      busStations: [...this.chunks.values()].flatMap((c) =>
+        c.busStation ? [c.busStation] : [],
+      ),
       journeyPlaces: [...this.chunks.values()].flatMap((c) =>
         c.journeyPlaces.map((p) => p.id),
       ),

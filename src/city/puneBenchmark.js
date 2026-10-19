@@ -1,5 +1,6 @@
 import { inside, nearest } from "./spatial.js";
 import { STREET_SCENES } from "./puneStreetDetails.js";
+import { inStationGrounds } from "./swargatePlan.js";
 import {
   JOURNEY_PLACES,
   bayContains,
@@ -101,6 +102,7 @@ export function cityStreetBays(data, path, junctions, quality = "Medium") {
         const off = (r.width / 2 + 1.55) * side;
         const x = r.p[0] + dx * d - dz * off,
           z = r.p[1] + dz * d + dx * off;
+        if (inStationGrounds(x, z, path.manifest.origin)) continue;
         if (
           Object.values(JOURNEY_PLACES).some((p) =>
             bayContains(p, x, z, span / 2 + 2),
@@ -206,6 +208,21 @@ export function renderBenchmark(bays, data, path, block, res, height) {
       res.concrete,
     );
     b(-p.side * 1.43, 0.025, 0, 0.15, 0.04, span + 0.03, res.drain);
+    if (
+      res.curbYellow &&
+      ["primary", "secondary", "trunk"].includes(path.roads[p.roadId].type)
+    ) {
+      for (const side of [-1, 1])
+        b(
+          -p.side * 1.28,
+          0.16,
+          (side * span) / 4,
+          0.18,
+          0.22,
+          span / 2 - 0.03,
+          (p.index + (side + 1) / 2) & 1 ? res.curbYellow : res.curbDark,
+        );
+    }
     if (p.index % 7 === 0) {
       b(-p.side * 1.17, 0.265, 0, 0.32, 0.025, 0.65, res.drain);
       for (let j = -2; j <= 2; j++)
@@ -231,7 +248,14 @@ export function renderBenchmark(bays, data, path, block, res, height) {
     )
       continue;
     b(p.side * 2.85, 0.015, 0, 3.2, 0.03, span + 0.03, res.forecourt);
-    if (!entrance) {
+    // Compound walls need an actual nearby frontage behind them. Empty verges
+    // and junction approaches should not become a maze of freestanding walls.
+    const compound = data.buildings.some((building) => {
+      const bx = (building.bounds[0] + building.bounds[2]) / 2,
+        bz = (building.bounds[1] + building.bounds[3]) / 2;
+      return Math.hypot(bx - wx, bz - wz) < 18;
+    });
+    if (!entrance && compound) {
       b(p.side * 4.35, 0.57, 0, 0.24, 1.14, span + 0.03, res.concrete);
       b(p.side * 4.35, 1.16, 0, 0.32, 0.1, span + 0.03, res.trim);
       if (p.index % 4 === 0)
