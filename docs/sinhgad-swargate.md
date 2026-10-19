@@ -27,4 +27,4 @@ Road additions include divided-carriageway lane paint, edge lines, approach stop
 
 Browser evidence is under `output/map-expansion/`: `browser-report.json`, `views-report.json`, `sinhgad-swargate-ui.png`, `sinhgad-swargate-touch.png`, `sinhgad-flyover-view.png`, `swargate-terminal-view.png` and `parvati-streets-view.png`. Full-lap validation is simulated; real-time Chrome tests cover the station approach plus a short portion of each other exploration route.
 
-No deployment or Git commit was performed.
+Cloudflare publishes this game from `feature/real-pune` at [Wanderlane](https://wanderlane.karkhanisvinayak.workers.dev/). Release hash checks are saved in `output/swargate-promo/deployment-report.json`; live route, station, keyboard and touch checks are saved in `output/swargate-live/browser-report.json` after they pass.

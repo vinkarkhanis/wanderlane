@@ -293,7 +293,7 @@ export function renderSwargate(
       continue;
     for (const [geometry, material] of [
       [res.oakWood, res.bark],
-      [res.oakLeaves, res.leaf],
+      [res.oakLeaves, res.stationLeaf],
     ]) {
       const g = geometry.clone();
       g.scale(0.9, 0.9, 0.9);

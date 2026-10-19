@@ -181,6 +181,11 @@ export class CityWorld {
     addGroundDetail(this.res.asphalt);
     addGroundDetail(this.res.shoulder);
     Object.assign(this.res, vegetationResources("meadow", this.wind));
+    // Station foliage is baked into ordinary chunk meshes. The shared tree
+    // material's wind shader requires instanceMatrix, so use a static clone.
+    this.res.stationLeaf = this.res.leaf.clone();
+    this.res.stationLeaf.onBeforeCompile = () => {};
+    this.res.stationLeaf.userData.station = true;
     const surfaces = benchmarkMaterials();
     Object.assign(this.res, surfaces.materials);
     Object.assign(this.res, stationMaterials());
@@ -230,6 +235,7 @@ export class CityWorld {
     this.res.terrain.color.setHex(p[0]);
     this.res.park.color.setHex(season === "Monsoon" ? 0x528343 : 0x808457);
     this.res.leaf.color.setHex(p[1]);
+    this.res.stationLeaf.color.setHex(p[1]);
     this.res.grass.color.setHex(p[0]);
     this.res.asphalt.color.setHex(p[2]);
     this.res.asphalt.roughness = season === "Monsoon" ? 0.34 : 0.94;

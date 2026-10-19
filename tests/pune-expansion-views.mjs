@@ -11,6 +11,7 @@ try {
     viewport: { width: 1280, height: 800 },
   });
   page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
   await page.route("**/expansion-review", (r) =>
     r.fulfill({
       contentType: "text/html",
