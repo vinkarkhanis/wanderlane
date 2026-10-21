@@ -109,6 +109,22 @@ export class Monsoon {
     );
     this.spray.frustumCulled = false;
     scene.add(this.spray);
+    this.trafficSpray = new THREE.Points(
+      new THREE.BufferGeometry().setAttribute(
+        "position",
+        new THREE.BufferAttribute(new Float32Array(96 * 3), 3),
+      ),
+      new THREE.PointsMaterial({
+        color: 0xb4c8cc,
+        size: 0.48,
+        map: this.mistTexture,
+        transparent: true,
+        opacity: 0.2,
+        depthWrite: false,
+      }),
+    );
+    this.trafficSpray.frustumCulled = false;
+    scene.add(this.trafficSpray);
     const splashGeo = new THREE.PlaneGeometry(0.32, 0.32).rotateX(-Math.PI / 2);
     splashGeo.setAttribute(
       "impactPhase",
@@ -206,11 +222,12 @@ export class Monsoon {
         "#include <roughnessmap_fragment>",
         `#include <roughnessmap_fragment>
         float wetPatch = smoothstep(.32, .78, rainNoise(weatherPosition.xz*.19) * .65 + rainNoise(weatherPosition.xz*.71)*.35);
-        roughnessFactor = mix(roughnessFactor, mix(.52, .28, wetPatch), monsoonWet);
+        float puddle = smoothstep(.64, .83, wetPatch);
+        roughnessFactor = mix(roughnessFactor, mix(.46, .13, puddle), monsoonWet);
         diffuseColor.rgb *= mix(1.0, mix(.88, .76, wetPatch), monsoonWet);`,
       );
     };
-    material.customProgramCacheKey = () => "wanderlane-monsoon-v2";
+    material.customProgramCacheKey = () => "wanderlane-monsoon-v3";
     material.needsUpdate = true;
   }
   update(
@@ -233,36 +250,95 @@ export class Monsoon {
       path,
       roadDistance,
       night,
+      traffic = [],
     },
   ) {
     if (!paused) this.time += dt;
     this.wet.value = active ? 1 : 0;
     this.surface(world.res.asphalt);
+    for (const key of ["pavement", "forecourt", "concrete"])
+      this.surface(world.res[key]);
     const heavy = intensity === "Heavy";
     const count = heavy
-      ? quality === "Low" ? 1200 : quality === "High" ? 4800 : 2800
-      : quality === "Low" ? 360 : quality === "High" ? 1200 : 720;
+      ? quality === "Low"
+        ? 1200
+        : quality === "High"
+          ? 4800
+          : 2800
+      : quality === "Low"
+        ? 360
+        : quality === "High"
+          ? 1200
+          : 720;
     this.rain.visible = active && !reduced;
     this.spray.visible =
       active && !reduced && grounded && asphalt && Math.abs(v.speed) > 2;
     this.windshield.visible =
       active && !reduced && cockpit && enclosed && grounded;
     const t = this.time;
+    let trafficCount = 0;
+    if (active && !reduced && grounded) {
+      const positions = this.trafficSpray.geometry.attributes.position;
+      for (const c of traffic) {
+        if (trafficCount >= (quality === "Low" ? 32 : 96)) break;
+        const group = c.car.group;
+        if (
+          c.waiting ||
+          !group.visible ||
+          Math.abs(c.speed) < 3 ||
+          Math.hypot(group.position.x - v.x, group.position.z - v.z) > 45
+        )
+          continue;
+        const sin = Math.sin(group.rotation.y),
+          cos = Math.cos(group.rotation.y);
+        for (let i = 0; i < 32; i++) {
+          const [x, y, phase] = this.seeds[i + trafficCount];
+          const age = (t * 1.7 + phase) % 1;
+          const side = (i % 2 ? 0.65 : -0.65) + (x - 0.5) * age * 1.5;
+          const back =
+            -(c.car.bounds?.halfLength ?? 2) -
+            age * Math.min(5, Math.abs(c.speed) * 0.35);
+          positions.setXYZ(
+            trafficCount + i,
+            group.position.x + cos * side + sin * back,
+            group.position.y + 0.15 + Math.sin(age * Math.PI) * y * 0.65,
+            group.position.z - sin * side + cos * back,
+          );
+        }
+        trafficCount += 32;
+      }
+      positions.needsUpdate = trafficCount > 0;
+    }
+    this.trafficSpray.visible = trafficCount > 0;
+    this.trafficSpray.geometry.setDrawRange(0, trafficCount);
+    this.trafficSpray.material.opacity = heavy ? 0.22 : 0.12;
     if (this.rain.visible) {
       this.rain.geometry.instanceCount = count;
       this.rain.material.uniforms.elapsed.value = t;
-      this.rain.material.uniforms.center.value.set(camera.position.x, v.y, camera.position.z);
+      this.rain.material.uniforms.center.value.set(
+        camera.position.x,
+        v.y,
+        camera.position.z,
+      );
       this.rain.material.uniforms.strength.value = heavy ? 1 : 0;
       this.rain.material.uniforms.viewport.value.set(
-        innerWidth * pixelRatio,
-        innerHeight * pixelRatio,
+        document.getElementById("c").width,
+        document.getElementById("c").height,
       );
       this.rain.material.uniforms.night.value = night;
     }
     this.splashes.visible = active && !reduced && grounded && asphalt;
     this.splashes.count = heavy
-      ? quality === "Low" ? 24 : quality === "High" ? 64 : 48
-      : quality === "Low" ? 12 : quality === "High" ? 32 : 24;
+      ? quality === "Low"
+        ? 24
+        : quality === "High"
+          ? 64
+          : 48
+      : quality === "Low"
+        ? 12
+        : quality === "High"
+          ? 32
+          : 24;
     this.splashes.material.uniforms.elapsed.value = t;
     if (this.splashes.visible && t - this.lastSplashPlacement > 0.12) {
       for (let i = 0; i < this.splashes.count; i++) {
@@ -287,7 +363,10 @@ export class Monsoon {
       const a = this.spray.geometry.attributes.position;
       const sprayCount = quality === "Low" ? 24 : quality === "High" ? 96 : 56;
       this.spray.geometry.setDrawRange(0, sprayCount);
-      this.spray.material.opacity = Math.min(heavy ? 0.48 : 0.24, Math.abs(v.speed) * (heavy ? 0.022 : 0.01));
+      this.spray.material.opacity = Math.min(
+        heavy ? 0.48 : 0.24,
+        Math.abs(v.speed) * (heavy ? 0.022 : 0.01),
+      );
       for (let i = 0; i < sprayCount; i++) {
         const [x, y, z] = this.seeds[i];
         const age = (t * 1.8 + z) % 1;
@@ -350,6 +429,7 @@ export class Monsoon {
       sprayCount: this.spray.visible ? this.spray.geometry.drawRange.count : 0,
       windshield: this.windshield.visible,
       splashCount: this.splashes.visible ? this.splashes.count : 0,
+      trafficSprayCount: trafficCount,
       time: t,
     };
   }
@@ -363,7 +443,17 @@ export class Monsoon {
     const sweep = (1 - Math.cos(t * Math.PI * (heavy ? 2.2 : 1.1))) / 2;
     const angle = -0.12 - sweep * 1.3;
     const pivots = [0.28, 0.7];
-    const n = heavy ? quality === "Low" ? 90 : quality === "High" ? 240 : 180 : quality === "Low" ? 40 : quality === "High" ? 120 : 80;
+    const n = heavy
+      ? quality === "Low"
+        ? 90
+        : quality === "High"
+          ? 240
+          : 180
+      : quality === "Low"
+        ? 40
+        : quality === "High"
+          ? 120
+          : 80;
     for (let i = 0; i < n; i++) {
       const d = this.drops[i];
       const lifetime = 7 + d.phase * 0.4;

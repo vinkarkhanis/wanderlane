@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:filming:browser": "node tests/filming-browser.mjs",
     "test:vehicle:feel": "node --test tests/vehicle-feel.test.js",
     "test:vehicle:feel:browser": "node tests/vehicle-feel-browser.mjs",
     "test:monsoon:browser": "node tests/monsoon-browser.mjs",

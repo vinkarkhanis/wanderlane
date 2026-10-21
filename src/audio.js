@@ -80,6 +80,23 @@ export class AudioSystem {
           .connect(this.rainGain)
           .connect(this.gain);
         this.rainSource.start();
+        // Reuse one noise buffer and four fixed voices; never allocate while driving.
+        this.details = Object.fromEntries(
+          ["roof", "wiper", "passing", "shop"].map((name) => {
+            const filter = c.createBiquadFilter(),
+              gain = c.createGain(),
+              pan = c.createStereoPanner();
+            filter.type = "bandpass";
+            filter.Q.value = 0.8;
+            gain.gain.value = 0;
+            this.rainSource
+              .connect(filter)
+              .connect(gain)
+              .connect(pan)
+              .connect(this.gain);
+            return [name, { filter, gain, pan }];
+          }),
+        );
         this.windFilter = c.createBiquadFilter();
         this.windFilter.type = "lowpass";
         this.windGain = c.createGain();
@@ -133,6 +150,11 @@ export class AudioSystem {
           return { oscillator, gain, ratio };
         });
         this.nodes = [
+          ...Object.values(this.details).flatMap((d) => [
+            d.filter,
+            d.gain,
+            d.pan,
+          ]),
           this.rainSource,
           this.rainFilter,
           this.rainGain,
@@ -191,6 +213,90 @@ export class AudioSystem {
     const t = this.ctx.currentTime,
       ramp = (param, value) => param.setTargetAtTime(value, t, 0.12);
     ramp(this.gain.gain, this.muted || paused ? 0 : this.master);
+    const detail = this.details;
+    const wet = weather.rain && v.flight === "ground";
+    const roof =
+      wet && weather.cockpit
+        ? this.ambience *
+          (weather.heavy ? 0.035 : 0.014) *
+          (0.85 + 0.15 * Math.sin(t * 11))
+        : 0;
+    const sweep =
+      (1 -
+        Math.cos(
+          (weather.clock ?? 0) * Math.PI * (weather.heavy ? 2.2 : 1.1),
+        )) /
+      2;
+    const wiper =
+      wet && weather.cockpit
+        ? this.ambience *
+          0.025 *
+          Math.abs(
+            Math.sin(
+              (weather.clock ?? 0) * Math.PI * (weather.heavy ? 2.2 : 1.1),
+            ),
+          ) **
+            8
+        : 0;
+    ramp(detail.roof.filter.frequency, 850);
+    ramp(detail.roof.gain.gain, roof);
+    ramp(detail.wiper.filter.frequency, 420 + sweep * 650);
+    ramp(detail.wiper.gain.gain, wiper);
+    const camera = weather.camera;
+    let nearest = null,
+      distance = 45;
+    for (const car of weather.traffic ?? []) {
+      if (car.waiting || !car.car.group.visible || !camera) continue;
+      const p = car.car.group.position;
+      const d = Math.hypot(p.x - camera.position.x, p.z - camera.position.z);
+      if (d < distance) {
+        nearest = car;
+        distance = d;
+      }
+    }
+    const panFor = (p) =>
+      !camera || !p
+        ? 0
+        : Math.max(
+            -1,
+            Math.min(
+              1,
+              ((p.x - camera.position.x) * camera.matrixWorld.elements[0] +
+                (p.z - camera.position.z) * camera.matrixWorld.elements[2]) /
+                Math.max(
+                  4,
+                  Math.hypot(p.x - camera.position.x, p.z - camera.position.z),
+                ),
+            ),
+          );
+    const passing = nearest
+      ? this.ambience *
+        (wet ? 0.11 : 0.045) *
+        (1 - distance / 45) ** 2 *
+        Math.min(1, (Math.abs(nearest.speed) + Math.abs(v.speed)) / 12)
+      : 0;
+    ramp(detail.passing.gain.gain, passing);
+    ramp(detail.passing.pan.pan, panFor(nearest?.car.group.position));
+    ramp(
+      detail.passing.filter.frequency,
+      (wet ? 1800 : 650) + Math.abs(nearest?.speed ?? 0) * 45,
+    );
+    const shop = weather.stop
+      ? this.ambience *
+        0.02 *
+        (1 - weather.stop.distance / 28) ** 2 *
+        (0.7 + 0.3 * Math.sin(t * 4.1) ** 2)
+      : 0;
+    ramp(detail.shop.filter.frequency, weather.cockpit ? 800 : 1900);
+    ramp(detail.shop.gain.gain, shop);
+    ramp(detail.shop.pan.pan, panFor(weather.stop));
+    this.detailSnapshot = {
+      roof,
+      wiper,
+      passing,
+      shop,
+      passingPan: detail.passing.pan.pan.value,
+    };
     ramp(this.rainFilter.frequency, weather.cockpit ? 1700 : 5200);
     ramp(
       this.rainGain.gain,

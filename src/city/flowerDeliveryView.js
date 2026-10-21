@@ -18,6 +18,25 @@ export class FlowerDeliveryView {
     this.cream = material(0xf2ddbf);
     this.skin = material(0xbc8f70);
     this.cloth = material(0x527c80);
+    this.lamp = new THREE.MeshStandardMaterial({
+      color: 0xffd19a,
+      emissive: 0xffa34f,
+      emissiveIntensity: 1.7,
+      roughness: 0.45,
+    });
+    this.materials.push(this.lamp);
+    this.glow = new THREE.MeshBasicMaterial({
+      color: 0xffc078,
+      transparent: true,
+      opacity: 0.12,
+      depthWrite: false,
+    });
+    this.materials.push(this.glow);
+    this.poolGeometry = new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2);
+    this.geometries.push(this.poolGeometry);
+    this.lightPools = [];
+    this.deliveryDoor = new THREE.Vector3();
+    this.soundPosition = new THREE.Vector3();
     this.box = new THREE.BoxGeometry(1, 1, 1);
     this.bloom = new THREE.SphereGeometry(0.09, 6, 4);
     this.geometries.push(this.box, this.bloom);
@@ -168,26 +187,76 @@ export class FlowerDeliveryView {
       car.passengerWindow.visible = false;
   }
   poseDelivery(progress, reduced = false) {
-    const reach = Math.sin((Math.min(1, progress * 2) * Math.PI) / 2);
-    this.recipient.position.set(-0.7, 0, 4.35 - reach * 0.85);
-    this.recipient.userData.leftArm.rotation.x = reach * 1.05;
-    this.recipient.userData.rightArm.rotation.x = reach * 1.05;
+    const walk =
+      progress < 0.3
+        ? progress / 0.3
+        : progress < 0.58
+          ? 1
+          : progress < 0.85
+            ? 1 - (progress - 0.58) / 0.27
+            : 0;
+    const ease = walk * walk * (3 - 2 * walk);
+    const door = this.deliveryDoor;
+    // Walk around the front of the parked car, never through its bonnet or the
+    // shared chai counter behind the porch. The return uses the same clear path.
+    if (ease < 0.45)
+      this.recipient.position.set(
+        -0.7 + ((door.x + 0.7) * ease) / 0.45,
+        0,
+        3.1,
+      );
+    else
+      this.recipient.position.set(
+        door.x,
+        0,
+        3.1 + ((door.z - 3.1) * (ease - 0.45)) / 0.55,
+      );
+    const walking =
+      progress > 0 && (progress < 0.3 || (progress > 0.58 && progress < 0.85));
+    const swing =
+      walking && !reduced ? Math.sin(progress * Math.PI * 16) * 0.3 : 0;
+    this.recipient.userData.leftLeg.rotation.x = swing;
+    this.recipient.userData.rightLeg.rotation.x = -swing;
+    this.recipient.rotation.y = walking
+      ? (ease < 0.45 ? -Math.PI / 2 : 0) + (progress > 0.58 ? Math.PI : 0)
+      : 0;
+    const reach =
+      progress >= 0.3 && progress < 0.58
+        ? Math.sin(((progress - 0.3) / 0.28) * Math.PI)
+        : progress >= 0.58
+          ? 0.7
+          : 0;
+    this.recipient.userData.leftArm.rotation.x = reach;
+    this.recipient.userData.rightArm.rotation.x = reach;
     this.recipient.userData.rightArm.rotation.z =
-      progress > 0.6 && !reduced
-        ? Math.sin((progress - 0.6) * Math.PI * 5) * 0.25
+      progress > 0.85 && !reduced
+        ? Math.sin((progress - 0.85) * Math.PI * 10) * 0.4
         : 0;
     const bouquet = this.destination.userData.bouquet;
-    bouquet.position.set(-0.7, 0.93, 3.22 + (1 - reach) * 0.65);
+    bouquet.position.copy(this.recipient.position);
+    bouquet.position.y = 1.02;
+    bouquet.position.z -= 0.32;
     bouquet.scale.setScalar(0.85);
     this.deliveryProgress = progress;
   }
   finishHandover() {
     this.finishedByPlayer = true;
     this.poseDelivery(1, true);
+    this.cargo.visible = false;
+    this.cargoLocation = null;
+    this.destination.userData.bouquet.visible = true;
   }
   get snapshot() {
     return {
       progress: this.deliveryProgress,
+      beat:
+        this.deliveryProgress < 0.3
+          ? "approaching car"
+          : this.deliveryProgress < 0.58
+            ? "receiving bouquet"
+            : this.deliveryProgress < 0.85
+              ? "returning to porch"
+              : "thank you",
       cargoLocation: this.cargoLocation ?? null,
       pickupStage: this.pickupStage ?? null,
       stage:
@@ -203,6 +272,22 @@ export class FlowerDeliveryView {
     mesh.position.set(x, y, z);
     mesh.scale.set(w, h, d);
     group.add(mesh);
+  }
+  batchStatic(group) {
+    // The additional porch detail costs one draw per material, rather than per tile.
+    const batches = new Map();
+    for (const child of [...group.children]) {
+      if (child.geometry !== this.box) continue;
+      child.updateMatrix();
+      if (!batches.has(child.material)) batches.set(child.material, []);
+      batches.get(child.material).push(child.matrix.clone());
+      group.remove(child);
+    }
+    for (const [material, matrices] of batches) {
+      const mesh = new THREE.InstancedMesh(this.box, material, matrices.length);
+      matrices.forEach((matrix, i) => mesh.setMatrixAt(i, matrix));
+      group.add(mesh);
+    }
   }
   flowers() {
     const group = new THREE.Group();
@@ -246,6 +331,68 @@ export class FlowerDeliveryView {
   }
   porch(title, courtyard) {
     const group = new THREE.Group();
+    // Decorative pieces remain on the existing parcel, behind the parking bay.
+    const awning = new THREE.Group();
+    for (let i = 0; i < 9; i++) {
+      this.block(
+        awning,
+        -1.6 + i * 0.4,
+        2.57,
+        4.05,
+        0.4,
+        0.09,
+        1.3,
+        i % 2 ? this.cream : this.cloth,
+      );
+      this.block(
+        awning,
+        -1.6 + i * 0.4,
+        2.43,
+        3.43,
+        0.4,
+        0.22,
+        0.07,
+        i % 2 ? this.cream : this.cloth,
+      );
+    }
+    if (!courtyard) {
+      this.batchStatic(awning);
+      group.add(awning);
+    }
+    for (const x of [-1.25, 1.25]) {
+      this.block(group, x, 2.12, 4.55, 0.22, 0.3, 0.18, this.lamp);
+      this.block(group, x, 2.32, 4.55, 0.3, 0.07, 0.24, this.wood);
+      const pool = new THREE.Mesh(this.poolGeometry, this.glow);
+      pool.position.set(x, 0.025, 4.05);
+      pool.scale.set(1.2, 1, 0.8);
+      group.add(pool);
+      this.lightPools.push(pool);
+    }
+    for (let i = 0; i < 7; i++)
+      this.block(
+        group,
+        -1.5 + i * 0.5,
+        0.025,
+        4.08,
+        0.46,
+        0.035,
+        1.35,
+        i % 2 ? this.cream : this.wood,
+      );
+    for (const x of [-1.6, 1.6]) {
+      this.block(group, x, 0.25, 4.32, 0.32, 0.48, 0.32, this.wood);
+      for (let i = 0; i < 3; i++)
+        this.block(
+          group,
+          x + (i - 1) * 0.08,
+          0.65 + (i % 2) * 0.13,
+          4.32,
+          0.13,
+          0.48,
+          0.18,
+          this.leaf,
+        );
+    }
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
     canvas.height = 128;
@@ -299,7 +446,8 @@ export class FlowerDeliveryView {
       }
       this.block(group, 0.8, 1.28, 4.1, 0.95, 0.08, 0.65, this.wood);
     }
-    const bouquet = this.flowers();
+    this.batchStatic(group);
+    const bouquet = courtyard ? this.wrappedBouquet() : this.flowers();
     bouquet.position.set(0.8, 1.32, 4.1);
     group.add(bouquet);
     group.userData.bouquet = bouquet;
@@ -355,16 +503,60 @@ export class FlowerDeliveryView {
       s.cargo === "awaiting pickup" && (s.pickup?.elapsed ?? 0) < 0.8;
     this.pickupStage = s.pickup?.stage ?? null;
     this.posePickup(s, car, reduced);
+    car.body.updateWorldMatrix(true, false);
+    this.destination.updateWorldMatrix(true, false);
+    this.deliveryDoor.set(
+      (car.bounds?.halfWidth ?? 1) + 0.6,
+      0,
+      car.passengerSeat?.[2] ?? 0,
+    );
+    car.body.localToWorld(this.deliveryDoor);
+    this.destination.worldToLocal(this.deliveryDoor);
+    this.deliveryDoor.y = 0;
+    // A player who has already departed sees the recipient safely on the porch.
+    if (Math.hypot(this.deliveryDoor.x + 0.7, this.deliveryDoor.z - 3.1) > 7)
+      this.deliveryDoor.set(-0.7, 0, 3.1);
+    if (s.cargo !== "delivered") {
+      this.recipient.rotation.y = 0;
+      const distance = Math.hypot(
+        car.group.position.x - this.destination.position.x,
+        car.group.position.z - this.destination.position.z,
+      );
+      this.recipient.userData.rightArm.rotation.z =
+        distance < 25 && !reduced ? -0.35 - Math.sin(time * 2.5) * 0.15 : 0;
+    }
     this.destination.userData.bouquet.visible = s.cargo === "delivered";
     if (s.cargo === "delivered") {
       this.deliveryStarted ??= time;
       this.poseDelivery(
         reduced || this.finishedByPlayer
           ? 1
-          : Math.min(1, (time - this.deliveryStarted) / 4),
+          : Math.min(1, (time - this.deliveryStarted) / 8),
         reduced,
       );
+      this.destination.userData.bouquet.visible = this.deliveryProgress >= 0.42;
+      this.cargo.visible = this.deliveryProgress < 0.42;
+      this.cargoLocation = this.cargo.visible
+        ? seat
+          ? "passenger seat"
+          : "rear pillion"
+        : null;
     }
+  }
+  nearestSound(camera) {
+    let nearest = null;
+    for (const group of [this.pickup, this.destination]) {
+      if (!group.visible) continue;
+      this.soundPosition.set(0, 1.3, 4.1).applyMatrix4(group.matrixWorld);
+      const distance = camera.distanceTo(this.soundPosition);
+      if (distance < 28 && (!nearest || distance < nearest.distance))
+        nearest = {
+          x: this.soundPosition.x,
+          z: this.soundPosition.z,
+          distance,
+        };
+    }
+    return nearest;
   }
   dispose() {
     for (const group of [

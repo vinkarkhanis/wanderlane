@@ -1,7 +1,11 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
-const dir = "output/flower-delivery";
+const dir = process.env.WANDERLANE_JOURNEY_OUTPUT ?? "output/flower-delivery";
+const routes = process.env.WANDERLANE_JOURNEY_ROUTES?.split(",") ?? [
+  "main",
+  "detour",
+];
 await mkdir(dir, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const errors = [],
@@ -14,15 +18,22 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.addInitScript(() => {
     const raf = requestAnimationFrame.bind(window);
+    let previous = performance.now(),
+      clock = previous;
+    window.journeyTimeScale = 10;
     window.requestAnimationFrame = (cb) =>
-      raf(() => cb(performance.now() * 10));
+      raf((now) => {
+        clock += (now - previous) * window.journeyTimeScale;
+        previous = now;
+        cb(clock);
+      });
   });
   await page.goto(url);
   await page.waitForFunction(
     () => window.wanderlane && window.wanderlane.state.experience,
   );
   await page.click("#startBtn");
-  for (const route of ["main", "detour"]) {
+  for (const route of routes) {
     if (route === "detour") await page.click("#tripCancel");
     await page.selectOption("#discoveryDrive", "flower-delivery");
     await page.selectOption("#journeyRoute", route);
@@ -85,6 +96,9 @@ try {
         nextLog += 20000;
       }
       if (s.experience.status === "completed") {
+        await page.evaluate(() => {
+          window.journeyTimeScale = 1;
+        });
         report[route] = {
           pickedUp,
           pickupShot,
@@ -100,6 +114,34 @@ try {
     assert.ok(pickedUp && pickupShot && arrivalShot);
     assert.equal(report[route].trip.cargo, "delivered");
     assert.equal(report[route].trip.routeChoice, route);
+    await page.click("#filmBtn");
+    await page.selectOption("#filmShot", "story");
+    await page.selectOption("#filmFormat", "landscape");
+    await page.check("#filmClean");
+    await page.check("#filmCaptions");
+    await page.click("#filmRecord");
+    await page.waitForFunction(() => window.wanderlane.state.filming.recording);
+    await page.waitForTimeout(9500);
+    await page.click("#filmRecord");
+    await page.waitForSelector("#filmDownload:visible");
+    const downloadEvent = page.waitForEvent("download");
+    await page.click("#filmDownload");
+    await (await downloadEvent).saveAs(`${dir}/${route}-arrival.webm`);
+    await page.waitForFunction(
+      () => window.wanderlane.state.deliveryMoment.progress >= 1,
+    );
+    assert.equal(
+      (await page.evaluate(() => window.wanderlane.state)).deliveryMoment
+        .cargoLocation,
+      null,
+    );
+    await page
+      .locator("#c")
+      .screenshot({ path: `${dir}/${route}-cinematic-arrival.png` });
+    await page.click("#filmClose");
+    await page.evaluate(() => {
+      window.journeyTimeScale = 10;
+    });
     await page.screenshot({ path: `${dir}/${route}-arrival.png` });
     await page.click("#postcardBtn");
     await page.waitForSelector("#postcardDialog[open]");
@@ -117,7 +159,7 @@ try {
     await page.locator("#discoveryJournal summary").click();
   }
   const before = await page.evaluate(() => window.wanderlane.state.journal);
-  assert.equal(before.photos[0].route, "detour");
+  assert.equal(before.photos[0].route, routes.at(-1));
   await page.reload();
   await page.waitForFunction(() => window.wanderlane);
   assert.deepEqual(

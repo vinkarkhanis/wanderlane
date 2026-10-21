@@ -5,6 +5,59 @@
   --accent: #c9b78a;
   --panel: rgba(18, 37, 39, 0.83);
 }
+body.filming-clean
+  > :not(#c):not(#filmingPanel):not(#mapAttribution):not(dialog):not(script) {
+  visibility: hidden !important;
+}
+body.filming-controls-hidden #filmingPanel {
+  opacity: 0;
+  pointer-events: none;
+}
+#filmingPanel {
+  position: fixed;
+  z-index: 40;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(680px, calc(100vw - 24px));
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 18px;
+  border: 1px solid #c9b78a66;
+  border-radius: 12px;
+  color: #eeeade;
+  background: #10282bf2;
+  box-shadow: 0 8px 32px #0005;
+}
+#filmingPanel[hidden] {
+  display: none;
+}
+#filmingPanel strong {
+  width: 100%;
+  font:
+    20px Georgia,
+    serif;
+}
+#filmingPanel label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+#filmingPanel select {
+  max-width: 175px;
+}
+#filmingPanel #filmStatus {
+  width: 100%;
+  font-size: 11px;
+  color: #bdccc4;
+}
+#filmingPanel a {
+  color: #ffe0a1;
+}
 #cityTrip {
   position: fixed;
   top: 185px;
@@ -143,6 +196,9 @@ summary:focus-visible {
   outline-offset: 4px;
 }
 #c {
+  position: fixed;
+  left: 0;
+  top: 0;
   display: block;
   width: 100%;
   height: 100%;

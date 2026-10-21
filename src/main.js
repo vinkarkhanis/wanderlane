@@ -40,6 +40,7 @@ import { Controls } from "./controls.js";
 import { AudioSystem } from "./audio.js";
 import { Particles } from "./particles.js";
 import { Monsoon } from "./monsoon.js";
+import { Filming } from "./filming.js";
 import { BIOMES, BIOME_KEYS } from "./biomes.js";
 import { COLORS, QUALITY } from "./config.js";
 import { loadSettings, saveSettings } from "./settings.js";
@@ -64,6 +65,10 @@ const scene = new THREE.Scene(),
   monsoon = new Monsoon(scene);
 const journal = new DiscoveryJournal();
 const flowerView = new FlowerDeliveryView(scene);
+const filming = new Filming(renderer, rig, audio);
+el("filmBtn").addEventListener("click", () => {
+  if (started && !paused) filming.toggle();
+});
 const journeyMap = new CityJourneyMap();
 let endlessLane = 2;
 let cityActivityIntroduced = saved.cityActivityVersion === 1;
@@ -376,7 +381,7 @@ function setQuality() {
     traffic.setMode(traffic.mode, vehicle);
   }
   renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY[quality].dpr));
-  renderer.setSize(innerWidth, innerHeight);
+  filming.resize();
   world.dispose();
   world = makeWorld();
   if (signals && driveMode === "pune") {
@@ -479,8 +484,18 @@ function updateLabels() {
     ? "Following the road. Enjoy the view."
     : "A little further. A little quieter.";
 }
-function pause() {
+function pause(force = false) {
   if (!started) return;
+  if (filming.clean && !force) {
+    filming.setClean(false);
+    document.body.classList.remove("filming-controls-hidden");
+    return;
+  }
+  if (force) {
+    filming.setClean(false);
+    document.body.classList.remove("filming-controls-hidden");
+  }
+  filming.stop();
   if (el("postcardDialog").open) {
     el("postcardDialog").close();
     return;
@@ -916,12 +931,13 @@ el("startBtn").addEventListener("click", async () => {
   }
 });
 addEventListener("resize", () => {
-  renderer.setSize(innerWidth, innerHeight);
-  rig.resize();
+  filming.stop();
+  filming.resize();
 });
 document.addEventListener("visibilitychange", () => {
   controls.clear();
-  if (document.hidden && started && !paused) pause();
+  if (document.hidden) filming.stop();
+  if (document.hidden && started && !paused) pause(true);
   // Animation frames may stop in a hidden tab; silence audio immediately.
   if (document.hidden && audio.ctx) {
     audio.gain.gain.cancelScheduledValues(audio.ctx.currentTime);
@@ -930,6 +946,7 @@ document.addEventListener("visibilitychange", () => {
 });
 renderer.domElement.addEventListener("webglcontextlost", (e) => {
   e.preventDefault();
+  filming.stop();
   paused = true;
   toast("Graphics context lost. Reload to resume your drive.");
 });
@@ -1013,7 +1030,12 @@ function loop(now) {
     }
   } else accumulator = 0;
   vehicle.auto = auto;
-  car.setCameraMode(rig.mode);
+  const filmingExterior =
+    !filming.panel.hidden &&
+    !reduced &&
+    (["tracking", "roadside"].includes(filming.shot) ||
+      (filming.shot === "story" && experience?.snapshot.cargo === "delivered"));
+  car.setCameraMode(filmingExterior ? 0 : rig.mode);
   const visual = presentation.sample(
     vehicle,
     accumulator / step,
@@ -1083,8 +1105,17 @@ function loop(now) {
   for (const material of Object.values(world.res))
     if (material?.isMaterial) material.envMapIntensity = 0.5 - env.night * 0.44;
   if (raining) world.res.asphalt.envMapIntensity = 0.4;
+  const frontages =
+    world.frontageMaterials ?? world.settlementResources?.materials;
+  if (frontages) {
+    frontages.lamp.emissiveIntensity =
+      0.65 + env.night * 0.8 + (raining ? 0.3 : 0);
+    frontages.interior.emissiveIntensity =
+      0.18 + env.night * 0.3 + (raining ? 0.12 : 0);
+  }
   particles.update(visual, biome, env.night, time, reduced || raining);
   rig.update(visual, dt, reduced, car);
+  filming.update(visual, dt, paused, reduced, experience?.snapshot, flowerView);
   monsoon.update(visual, {
     active: raining,
     intensity: rainIntensity,
@@ -1098,11 +1129,12 @@ function loop(now) {
     path,
     roadDistance: vehicle.near.distance,
     night: env.night,
-    cockpit: rig.mode === 3,
+    cockpit: rig.mode === 3 && !filmingExterior,
     enclosed: vehicle.spec.kind !== "bike",
     grounded: vehicle.flight === "ground",
     asphalt: vehicle.surface === "Asphalt",
     world,
+    traffic: traffic.cars,
   });
   audio.update(
     vehicle,
@@ -1122,7 +1154,12 @@ function loop(now) {
     {
       rain: raining,
       heavy: heavyRain,
-      cockpit: rig.mode === 3 && vehicle.spec.kind !== "bike",
+      cockpit:
+        rig.mode === 3 && !filmingExterior && vehicle.spec.kind !== "bike",
+      camera: rig.cam,
+      traffic: traffic.cars,
+      stop: flowerView.nearestSound(rig.cam.position),
+      clock: monsoon.snapshot.time,
     },
   );
   hudTime += dt;
@@ -1232,6 +1269,7 @@ function loop(now) {
     hudTime = 0;
   }
   renderer.render(scene, rig.cam);
+  filming.draw(driveMode === "pune");
 }
 requestAnimationFrame(loop);
 el("startBtn").disabled = false;
@@ -1243,6 +1281,7 @@ window.wanderlane = {
       seed,
       switching,
       frameMs,
+      filming: filming.snapshot,
       driveMode,
       settlementBuildings: world.settlementCount ?? 0,
       cityPlaces: world.places ?? [],
@@ -1338,6 +1377,7 @@ window.wanderlane = {
       weather: {
         ...monsoon.snapshot,
         rainGain: audio.rainGain?.gain.value ?? 0,
+        detail: audio.detailSnapshot,
         skyTop: env.skyU.top.value.getHexString(),
         skyHorizon: env.skyU.bottom.value.getHexString(),
       },
